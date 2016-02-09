@@ -9,7 +9,7 @@ if [[ ${TRAVIS_BUILD_TYPE} == 'MASON' ]]; then
 
     source ./bootstrap.sh
 
-elif [[ ${TRAVIS__TYPE} == 'LINUX_DEBIAN' ]]; then
+elif [[ ${TRAVIS_BUILD_TYPE} == 'LINUX_DEBIAN' ]]; then
 
     BUILD_TYPE=${BUILD_TYPE:-Release}
     CXX=${CXX:-g++}
