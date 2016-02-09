@@ -95,7 +95,7 @@ matrix:
     - os: osx
       osx_image: xcode7
       compiler: clang
-      env: COMPILER='clang++' BUILD_TYPE='Debug'
+      env: COMPILER='clang++' BUILD_TYPE='Debug' COVERAGE=true
 
     - os: osx
       osx_image: xcode7
@@ -128,10 +128,10 @@ before_script:
       ./scripts/check_taginfo.py taginfo.json profiles/car.lua
     fi
   - rvm use 1.9.3
-  - gem install bundler
-  - bundle install
+  - bundle install --jobs=3
   - mkdir build && cd build
   - export CXX=${COMPILER}
+  - export CC=${COMPILER}
   - export OSRM_PORT=5000 OSRM_TIMEOUT=60
   - cmake .. -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DBUILD_SHARED_LIBS=${BUILD_SHARED_LIBS:-OFF} -DBUILD_TOOLS=1
 
@@ -154,3 +154,6 @@ script:
   - cmake ..
   - make
   - ./osrm-example ../../test/data/berlin-latest.osrm
+
+after_script:
+  - ./scripts/coverage_report.sh

@@ -4,7 +4,7 @@ set -e -u
 set -o pipefail
 
 CMAKEOPTIONS=${CMAKEOPTIONS:-""}
-TARGET=${TARGET:-Release}
+BUILD_TYPE=${BUILD_TYPE:-Release}
 COVERAGE=${COVERAGE:-false}
 CXX=${CXX:-g++}
 
@@ -40,6 +40,6 @@ elif [[ -d /tmp/osrm-source-installed-deps/ ]]; then
     CMAKE_ARGS="${CMAKE_ARGS} -DCMAKE_LIBRARY_PATH=/tmp/osrm-source-installed-deps/lib "
 fi
 
-cmake ../ -DCMAKE_CXX_COMPILER="${CXX}" -DCMAKE_BUILD_TYPE=${TARGET} ${CMAKEOPTIONS} ${CMAKE_ARGS}
+cmake ../ -DCMAKE_CXX_COMPILER="${CXX}" -DCMAKE_BUILD_TYPE=${BUILD_TYPE} ${CMAKEOPTIONS} ${CMAKE_ARGS}
 
 set +e +u

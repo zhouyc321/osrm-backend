@@ -5,13 +5,13 @@ set -o pipefail
 
 source ./scripts/install_osmosis.sh
 
-if [[ ${BUILD_TYPE} == 'MASON' ]]; then
+if [[ ${TRAVIS_BUILD_TYPE} == 'MASON' ]]; then
 
     source ./bootstrap.sh
 
-elif [[ ${BUILD_TYPE} == 'LINUX_DEBIAN' ]]; then
+elif [[ ${TRAVIS__TYPE} == 'LINUX_DEBIAN' ]]; then
 
-    TARGET=${TARGET:-Release}
+    BUILD_TYPE=${BUILD_TYPE:-Release}
     CXX=${CXX:-g++}
     LD_LIBRARY_PATH=${LD_LIBRARY_PATH:=""}
     JOBS=${JOBS:=1}
@@ -36,7 +36,7 @@ elif [[ ${BUILD_TYPE} == 'LINUX_DEBIAN' ]]; then
     cmake .. -DCMAKE_CXX_COMPILER="${CXX}" \
       -DCMAKE_INSTALL_PREFIX=${BUILD_DIR} \
       -DBUILD_TESTING=OFF \
-      -DCMAKE_BUILD_TYPE=${TARGET}
+      -DCMAKE_BUILD_TYPE=${BUILD_TYPE}
     make -j${JOBS}
     make install
 
