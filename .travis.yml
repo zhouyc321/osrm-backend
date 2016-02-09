@@ -119,14 +119,13 @@ matrix:
 
 
 install:
-  - DEPS_DIR="${TRAVIS_BUILD_DIR}/deps"
-  - mkdir -p ${DEPS_DIR} && cd ${DEPS_DIR}
   - |
-    if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
+    if [[ "${TRAVIS_OS_NAME}" == "linux" ]] && [[ "${TRAVIS_BUILD_TYPE}" != "MASON" ]]; then
+      DEPS_DIR="${TRAVIS_BUILD_DIR}/deps"
+      mkdir -p ${DEPS_DIR} && cd ${DEPS_DIR}
       CMAKE_URL="http://www.cmake.org/files/v3.3/cmake-3.3.2-Linux-x86_64.tar.gz"
       mkdir cmake && travis_retry wget --quiet -O - ${CMAKE_URL} | tar --strip-components=1 -xz -C cmake
       export PATH=${DEPS_DIR}/cmake/bin:${PATH}
-
     elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
       brew install cmake boost libzip libstxxl libxml2 lua51 luabind tbb GDAL md5sha1sum
     fi
@@ -171,4 +170,5 @@ script:
   - ./osrm-example ../../test/data/berlin-latest.osrm
 
 after_script:
+  - cd ${TRAVIS_BUILD_DIR}
   - ./scripts/coverage_report.sh
