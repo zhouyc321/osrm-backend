@@ -13,10 +13,6 @@ if [[ $(uname -s) == 'Linux' ]]; then
     echo 'ccache ${CXX} "$@"' >> ./cxx_compiler;
     chmod +x ./cxx_compiler;
     export CXX="$(pwd)/cxx_compiler";
-    echo '#!/bin/bash' > ./c_compiler;
-    echo 'ccache ${CC} "$@"' >> ./c_compiler;
-    chmod +x ./c_compiler;
-    export CC="$(pwd)/c_compiler";
   fi
 fi
 

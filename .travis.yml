@@ -9,6 +9,7 @@ branches:
   only:
     - master
     - develop
+    - masonize
 
 matrix:
   include:
@@ -131,7 +132,6 @@ before_script:
   - bundle install --jobs=3
   - mkdir build && cd build
   - export CXX=${COMPILER}
-  - export CC=${COMPILER}
   - export OSRM_PORT=5000 OSRM_TIMEOUT=60
   - cmake .. -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DBUILD_SHARED_LIBS=${BUILD_SHARED_LIBS:-OFF} -DBUILD_TOOLS=1
 
