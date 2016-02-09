@@ -38,13 +38,12 @@ DEALINGS IN THE SOFTWARE.
 #include <type_traits>
 
 #include <osmium/memory/item.hpp>
-#include <osmium/util/compatibility.hpp>
 
 namespace osmium {
 
     namespace memory {
 
-        template <class TMember>
+        template <typename TMember>
         class CollectionIterator : public std::iterator<std::forward_iterator_tag, TMember> {
 
             // This data_type is either 'unsigned char*' or 'const unsigned char*' depending
@@ -60,7 +59,7 @@ namespace osmium {
                 m_data(nullptr) {
             }
 
-            CollectionIterator(data_type data) noexcept :
+            explicit CollectionIterator(data_type data) noexcept :
                 m_data(data) {
             }
 
@@ -102,7 +101,7 @@ namespace osmium {
 
         }; // class CollectionIterator
 
-        template <class TMember, osmium::item_type TCollectionItemType>
+        template <typename TMember, osmium::item_type TCollectionItemType>
         class Collection : public Item {
 
         public:

@@ -67,7 +67,7 @@ namespace osmium {
         template <typename TKey>
         OSMIUM_NORETURN void not_found_error(TKey key) {
             std::stringstream s;
-            s << "id " << key << " no found";
+            s << "id " << key << " not found";
             throw not_found(s.str());
         }
 
@@ -89,7 +89,7 @@ namespace osmium {
          * the full range, so the max value is a good "empty" value.
          */
         template <>
-        inline OSMIUM_CONSTEXPR size_t empty_value<size_t>() {
+        inline constexpr size_t empty_value<size_t>() {
             return std::numeric_limits<size_t>::max();
         }
 

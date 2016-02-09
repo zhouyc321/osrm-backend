@@ -39,6 +39,7 @@ DEALINGS IN THE SOFTWARE.
 
 #include <zlib.h>
 
+#include <osmium/io/error.hpp>
 #include <osmium/util/cast.hpp>
 
 namespace osmium {
@@ -69,7 +70,7 @@ namespace osmium {
                 );
 
                 if (result != Z_OK) {
-                    throw std::runtime_error(std::string("failed to compress data: ") + zError(result));
+                    throw io_error(std::string("failed to compress data: ") + zError(result));
                 }
 
                 output.resize(output_size);
@@ -85,23 +86,24 @@ namespace osmium {
              *
              * @param input Compressed input data.
              * @param raw_size Size of uncompressed data.
-             * @returns Uncompressed data.
+             * @param output Uncompressed result data.
+             * @returns Pointer and size to incompressed data.
              */
-            inline std::unique_ptr<std::string> zlib_uncompress(const std::string& input, unsigned long raw_size) {
-                auto output = std::unique_ptr<std::string>(new std::string(raw_size, '\0'));
+            inline std::pair<const char*, size_t> zlib_uncompress_string(const char* input, unsigned long input_size, unsigned long raw_size, std::string& output) {
+                output.resize(raw_size);
 
                 auto result = ::uncompress(
-                    reinterpret_cast<unsigned char*>(const_cast<char *>(output->data())),
+                    reinterpret_cast<unsigned char*>(&*output.begin()),
                     &raw_size,
-                    reinterpret_cast<const unsigned char*>(input.data()),
-                    osmium::static_cast_with_assert<unsigned long>(input.size())
+                    reinterpret_cast<const unsigned char*>(input),
+                    input_size
                 );
 
                 if (result != Z_OK) {
-                    throw std::runtime_error(std::string("failed to uncompress data: ") + zError(result));
+                    throw io_error(std::string("failed to uncompress data: ") + zError(result));
                 }
 
-                return output;
+                return std::make_pair(output.data(), output.size());
             }
 
         } // namespace detail

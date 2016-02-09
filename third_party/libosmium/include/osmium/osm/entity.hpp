@@ -35,12 +35,13 @@ DEALINGS IN THE SOFTWARE.
 
 #include <osmium/memory/item.hpp>
 #include <osmium/osm/entity_bits.hpp>
+#include <osmium/osm/item_type.hpp>
 
 namespace osmium {
 
     namespace detail {
 
-        template <class TSubitem, class TIter>
+        template <typename TSubitem, typename TIter>
         inline TSubitem& subitem_of_type(TIter it, TIter end) {
             for (; it != end; ++it) {
                 if (it->type() == TSubitem::itemtype) {

@@ -41,6 +41,8 @@ DEALINGS IN THE SOFTWARE.
 
 #include <osmium/memory/buffer.hpp>
 #include <osmium/osm/item_type.hpp>
+#include <osmium/osm/location.hpp>
+#include <osmium/osm/node_ref.hpp>
 #include <osmium/osm/relation.hpp>
 #include <osmium/osm/tag.hpp>
 #include <osmium/osm/way.hpp>
@@ -49,11 +51,9 @@ DEALINGS IN THE SOFTWARE.
 
 namespace osmium {
 
-    struct invalid_location;
-
     namespace relations {
         class RelationMeta;
-    }
+    } // namespace relations
 
     /**
      * @brief Code related to the building of areas (multipolygons) from relations.
@@ -71,7 +71,7 @@ namespace osmium {
          *
          * @tparam TAssembler Multipolygon Assembler class.
          */
-        template <class TAssembler>
+        template <typename TAssembler>
         class MultipolygonCollector : public osmium::relations::Collector<MultipolygonCollector<TAssembler>, false, true, false> {
 
             typedef typename osmium::relations::Collector<MultipolygonCollector<TAssembler>, false, true, false> collector_type;
@@ -87,7 +87,8 @@ namespace osmium {
             void flush_output_buffer() {
                 if (this->callback()) {
                     osmium::memory::Buffer buffer(initial_output_buffer_size);
-                    std::swap(buffer, m_output_buffer);
+                    using std::swap;
+                    swap(buffer, m_output_buffer);
                     this->callback()(std::move(buffer));
                 }
             }
@@ -107,8 +108,8 @@ namespace osmium {
             }
 
             /**
-             * We are interested in all relations tagged with type=multipolygon or
-             * type=boundary.
+             * We are interested in all relations tagged with type=multipolygon
+             * or type=boundary.
              *
              * Overwritten from the base class.
              */
@@ -142,15 +143,22 @@ namespace osmium {
              * Overwritten from the base class.
              */
             void way_not_in_any_relation(const osmium::Way& way) {
-                if (way.nodes().size() > 3 && way.ends_have_same_location()) {
-                    // way is closed and has enough nodes, build simple multipolygon
-                    try {
+                // you need at least 4 nodes to make up a polygon
+                if (way.nodes().size() <= 3) {
+                    return;
+                }
+                try {
+                    if (!way.nodes().front().location() || !way.nodes().back().location()) {
+                        throw osmium::invalid_location("invalid location");
+                    }
+                    if (way.ends_have_same_location()) {
+                        // way is closed and has enough nodes, build simple multipolygon
                         TAssembler assembler(m_assembler_config);
                         assembler(way, m_output_buffer);
                         possibly_flush_output_buffer();
-                    } catch (osmium::invalid_location&) {
-                        // XXX ignore
                     }
+                } catch (osmium::invalid_location&) {
+                    // XXX ignore
                 }
             }
 
@@ -169,28 +177,6 @@ namespace osmium {
                 } catch (osmium::invalid_location&) {
                     // XXX ignore
                 }
-
-                // clear member metas
-                for (const auto& member : relation.members()) {
-                    if (member.ref() != 0) {
-                        auto& mmv = this->member_meta(member.type());
-                        auto range = std::equal_range(mmv.begin(), mmv.end(), osmium::relations::MemberMeta(member.ref()));
-                        assert(range.first != range.second);
-
-                        // if this is the last time this object was needed
-                        // then mark it as removed
-                        if (osmium::relations::count_not_removed(range.first, range.second) == 1) {
-                            this->get_member(range.first->buffer_offset()).set_removed(true);
-                        }
-
-                        for (auto it = range.first; it != range.second; ++it) {
-                            if (!it->removed() && relation.id() == this->get_relation(it->relation_pos()).id()) {
-                                it->remove();
-                                break;
-                            }
-                        }
-                    }
-                }
             }
 
             void flush() {
@@ -199,7 +185,10 @@ namespace osmium {
 
             osmium::memory::Buffer read() {
                 osmium::memory::Buffer buffer(initial_output_buffer_size, osmium::memory::Buffer::auto_grow::yes);
-                std::swap(buffer, m_output_buffer);
+
+                using std::swap;
+                swap(buffer, m_output_buffer);
+
                 return buffer;
             }
 

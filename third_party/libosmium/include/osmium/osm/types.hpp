@@ -34,7 +34,6 @@ DEALINGS IN THE SOFTWARE.
 */
 
 #include <cstdint>
-#include <cstdlib>
 
 namespace osmium {
 
@@ -50,6 +49,7 @@ namespace osmium {
     typedef uint32_t user_id_type;            ///< Type for OSM user IDs.
     typedef int32_t  signed_user_id_type;     ///< Type for signed OSM user IDs.
     typedef uint32_t num_changes_type;        ///< Type for changeset num_changes.
+    typedef uint32_t num_comments_type;       ///< Type for changeset num_comments.
 
     /**
      * Size for strings in OSM data such as user names, tag keys, roles, etc.
@@ -58,25 +58,8 @@ namespace osmium {
      */
     typedef uint16_t string_size_type;
 
-    inline object_id_type string_to_object_id(const char* string) {
-        return std::atoll(string);
-    }
-
-    inline object_version_type string_to_object_version(const char* string) {
-        return static_cast<object_version_type>(std::atol(string));
-    }
-
-    inline changeset_id_type string_to_changeset_id(const char* string) {
-        return static_cast<changeset_id_type>(std::atol(string));
-    }
-
-    inline signed_user_id_type string_to_user_id(const char* string) {
-        return static_cast<signed_user_id_type>(std::atol(string));
-    }
-
-    inline num_changes_type string_to_num_changes(const char* string) {
-        return static_cast<num_changes_type>(std::atol(string));
-    }
+    // maximum of 256 characters of max 4 bytes each (in UTF-8 encoding)
+    constexpr const int max_osm_string_length = 256 * 4;
 
 } // namespace osmium
 

@@ -123,8 +123,9 @@ def table_coord_to_lonlat ci,ri
   [@origin[0]+ci*@zoom, @origin[1]-ri*@zoom]
 end
 
-def add_osm_node name,lon,lat
-  node = OSM::Node.new make_osm_id, OSM_USER, OSM_TIMESTAMP, lon, lat
+def add_osm_node name,lon,lat,id
+  id = make_osm_id if id == nil
+  node = OSM::Node.new id, OSM_USER, OSM_TIMESTAMP, lon, lat
   node << { :name => name }
   node.uid = OSM_UID
   osm_db << node
@@ -228,17 +229,6 @@ def write_osm
   end
 end
 
-def convert_osm_to_pbf
-  unless File.exist?("#{osm_file}.osm.pbf")
-    log_preprocess_info
-    log "== Converting #{osm_file}.osm to protobuffer format...", :preprocess
-    unless system "osmosis --read-xml #{osm_file}.osm --write-pbf #{osm_file}.osm.pbf omitmetadata=true >>#{PREPROCESS_LOG_FILE} 2>&1"
-      raise OsmosisError.new $?, "osmosis exited with code #{$?.exitstatus}"
-    end
-    log '', :preprocess
-  end
-end
-
 def extracted?
   Dir.chdir TEST_FOLDER do
     File.exist?("#{extracted_file}.osrm") &&
@@ -257,15 +247,10 @@ def write_timestamp
   File.open( "#{prepared_file}.osrm.timestamp", 'w') {|f| f.write(OSM_TIMESTAMP) }
 end
 
-def pbf?
-  input_format=='pbf'
-end
-
 def write_input_data
   Dir.chdir TEST_FOLDER do
     write_osm
     write_timestamp
-    convert_osm_to_pbf if pbf?
   end
 end
 
@@ -273,12 +258,13 @@ def extract_data
   Dir.chdir TEST_FOLDER do
     log_preprocess_info
     log "== Extracting #{osm_file}.osm...", :preprocess
-    unless system "#{BIN_PATH}/osrm-extract #{osm_file}.osm#{'.pbf' if pbf?} --profile #{PROFILES_PATH}/#{@profile}.lua >>#{PREPROCESS_LOG_FILE} 2>&1"
+    unless system "#{BIN_PATH}/osrm-extract #{osm_file}.osm #{@extract_args} --profile #{PROFILES_PATH}/#{@profile}.lua >>#{PREPROCESS_LOG_FILE} 2>&1"
       log "*** Exited with code #{$?.exitstatus}.", :preprocess
       raise ExtractError.new $?.exitstatus, "osrm-extract exited with code #{$?.exitstatus}."
     end
     begin
-      ["osrm","osrm.names","osrm.restrictions"].each do |file|
+      ["osrm","osrm.names","osrm.restrictions","osrm.ebg","osrm.enw","osrm.edges","osrm.fileIndex","osrm.geometry","osrm.nodes","osrm.ramIndex"].each do |file|
+        log "Renaming #{osm_file}.#{file} to #{extracted_file}.#{file}", :preprocess
         File.rename "#{osm_file}.#{file}", "#{extracted_file}.#{file}"
       end
     rescue Exception => e
@@ -296,14 +282,16 @@ def prepare_data
       raise PrepareError.new $?.exitstatus, "osrm-prepare exited with code #{$?.exitstatus}."
     end
     begin
-      ["osrm.hsgr","osrm.fileIndex","osrm.geometry","osrm.nodes","osrm.ramIndex"].each do |file|
+      ["osrm.hsgr","osrm.fileIndex","osrm.geometry","osrm.nodes","osrm.ramIndex","osrm.core","osrm.edges"].each do |file|
+        log "Renaming #{extracted_file}.#{file} to #{prepared_file}.#{file}", :preprocess
         File.rename "#{extracted_file}.#{file}", "#{prepared_file}.#{file}"
       end
     rescue Exception => e
       raise FileError.new nil, "failed to rename data file after preparing."
     end
     begin
-      ["osrm.names","osrm.edges","osrm.restrictions"].each do |file|
+      ["osrm.names","osrm.restrictions","osrm"].each do |file|
+        log "Copying #{extracted_file}.#{file} to #{prepared_file}.#{file}", :preprocess
         FileUtils.cp "#{extracted_file}.#{file}", "#{prepared_file}.#{file}"
       end
     rescue Exception => e

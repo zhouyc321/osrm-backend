@@ -1,12 +1,16 @@
 #include "catch.hpp"
 
+#include <boost/crc.hpp>
+
+#include <osmium/osm/crc.hpp>
 #include <osmium/osm/relation.hpp>
 
 #include "helper.hpp"
 
-TEST_CASE("Basic_Relation") {
+TEST_CASE("Build relation") {
 
-SECTION("relation_builder") {
+    osmium::CRC<boost::crc_32_type> crc32;
+
     osmium::memory::Buffer buffer(10000);
 
     osmium::Relation& relation = buffer_add_relation(buffer,
@@ -32,7 +36,7 @@ SECTION("relation_builder") {
     REQUIRE(333 == relation.changeset());
     REQUIRE(21 == relation.uid());
     REQUIRE(std::string("foo") == relation.user());
-    REQUIRE(123 == relation.timestamp());
+    REQUIRE(123 == uint32_t(relation.timestamp()));
     REQUIRE(2 == relation.tags().size());
     REQUIRE(3 == relation.members().size());
 
@@ -55,6 +59,18 @@ SECTION("relation_builder") {
         }
         ++n;
     }
+
+    crc32.update(relation);
+    REQUIRE(crc32().checksum() == 0x2c2352e);
 }
 
+TEST_CASE("Member role too long") {
+    osmium::memory::Buffer buffer(10000);
+
+    osmium::builder::RelationMemberListBuilder builder(buffer);
+
+    const char role[2000] = "";
+    builder.add_member(osmium::item_type::node, 1, role, 1024);
+    REQUIRE_THROWS(builder.add_member(osmium::item_type::node, 1, role, 1025));
 }
+

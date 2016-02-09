@@ -37,18 +37,10 @@ DEALINGS IN THE SOFTWARE.
 #include <cstdint>
 #include <string>
 
-// Windows is only available for little endian architectures
-// http://stackoverflow.com/questions/6449468/can-i-safely-assume-that-windows-installations-will-always-be-little-endian
-#if !defined(_WIN32) && !defined(__APPLE__)
-# include <endian.h>
-#else
-# define __LITTLE_ENDIAN 1234
-# define __BYTE_ORDER __LITTLE_ENDIAN
-#endif
-
 #include <osmium/geom/coordinates.hpp>
 #include <osmium/geom/factory.hpp>
 #include <osmium/util/cast.hpp>
+#include <osmium/util/endian.hpp>
 
 namespace osmium {
 
@@ -196,7 +188,9 @@ namespace osmium {
                 linestring_type linestring_finish(size_t num_points) {
                     set_size(m_linestring_size_offset, num_points);
                     std::string data;
-                    std::swap(data, m_data);
+
+                    using std::swap;
+                    swap(data, m_data);
 
                     if (m_out_type == out_type::hex) {
                         return convert_to_hex(data);
@@ -254,7 +248,9 @@ namespace osmium {
                 multipolygon_type multipolygon_finish() {
                     set_size(m_multipolygon_size_offset, m_polygons);
                     std::string data;
-                    std::swap(data, m_data);
+
+                    using std::swap;
+                    swap(data, m_data);
 
                     if (m_out_type == out_type::hex) {
                         return convert_to_hex(data);
@@ -267,7 +263,7 @@ namespace osmium {
 
         } // namespace detail
 
-        template <class TProjection = IdentityProjection>
+        template <typename TProjection = IdentityProjection>
         using WKBFactory = GeometryFactory<osmium::geom::detail::WKBFactoryImpl, TProjection>;
 
     } // namespace geom

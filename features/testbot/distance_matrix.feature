@@ -29,7 +29,7 @@ Feature: Basic Distance Matrix
             | ab    | primary   |
             | bc    | secondary |
             | cd    | tertiary  |
-            
+
         When I request a travel time matrix I should get
             |   | a   | b   | c   | d   |
             | a | 0   | 100 | 300 | 600 |
@@ -49,7 +49,7 @@ Feature: Basic Distance Matrix
             |   | a       | b        |
             | a | 0       | 95 +- 10 |
             | b | 95 ~10% | 0        |
-    
+
     Scenario: Testbot - Travel time matrix of small grid
         Given the node map
             | a | b | c |
@@ -82,7 +82,7 @@ Feature: Basic Distance Matrix
             |   | a  | b   |
             | a | 0  | 100 |
             | b |    | 0   |
-    
+
     Scenario: Testbot - Travel time matrix of network with oneways
         Given the node map
             | x | a | b | y |
@@ -100,3 +100,100 @@ Feature: Basic Distance Matrix
             | y | 500 | 0   | 300 | 200 |
             | d | 200 | 300 | 0   | 300 |
             | e | 300 | 400 | 100 | 0   |
+
+    Scenario: Testbot - Travel time matrix and with only one source
+        Given the node map
+            | a | b | c |
+            | d | e | f |
+
+        And the ways
+            | nodes |
+            | abc   |
+            | def   |
+            | ad    |
+            | be    |
+            | cf    |
+
+        When I request a travel time matrix I should get
+            |   | a   | b   | e   | f   |
+            | a | 0   | 100 | 200 | 300 |
+
+     Scenario: Testbot - Travel time 3x2 matrix
+        Given the node map
+            | a | b | c |
+            | d | e | f |
+
+        And the ways
+            | nodes |
+            | abc   |
+            | def   |
+            | ad    |
+            | be    |
+            | cf    |
+
+        When I request a travel time matrix I should get
+            |   | b   | e   | f   |
+            | a | 100 | 200 | 300 |
+            | b | 0   | 100 | 200 |
+
+    Scenario: Testbot - All coordinates are from same small component
+        Given a grid size of 300 meters
+        Given the extract extra arguments "--small-component-size 4"
+        Given the node map
+            | a | b |  | f |
+            | d | e |  | g |
+
+        And the ways
+            | nodes |
+            | ab    |
+            | be    |
+            | ed    |
+            | da    |
+            | fg    |
+
+        When I request a travel time matrix I should get
+            |   | f   | g   |
+            | f | 0   | 300 |
+            | g | 300 |  0  |
+
+    Scenario: Testbot - Coordinates are from different small component and snap to big CC
+        Given a grid size of 300 meters
+        Given the extract extra arguments "--small-component-size 4"
+        Given the node map
+            | a | b |  | f | h |
+            | d | e |  | g | i |
+
+        And the ways
+            | nodes |
+            | ab    |
+            | be    |
+            | ed    |
+            | da    |
+            | fg    |
+            | hi    |
+
+        When I request a travel time matrix I should get
+            |   | f   | g   | h   | i   |
+            | f | 0   | 300 | 0   | 300 |
+            | g | 300 |  0  | 300 | 0   |
+            | h | 0   | 300 | 0   | 300 |
+            | i | 300 |  0  | 300 | 0   |
+
+    Scenario: Testbot - Travel time matrix with loops
+        Given the node map
+            | a | 1 | 2 | b |
+            | d | 4 | 3 | c |
+
+        And the ways
+            | nodes | oneway |
+            | ab    | yes |
+            | bc    | yes |
+            | cd    | yes |
+            | da    | yes |
+
+        When I request a travel time matrix I should get
+            |   | 1   | 2   | 3   | 4   |
+            | 1 | 0   | 100 +-1 | 400 +-1 | 500 +-1 |
+            | 2 | 700 +-1 | 0   | 300 +-1 | 400 +-1 |
+            | 3 | 400 +-1 | 500 +-1 | 0   | 100 +-1 |
+            | 4 | 300 +-1 | 400 +-1 | 700 +-1 | 0   |
