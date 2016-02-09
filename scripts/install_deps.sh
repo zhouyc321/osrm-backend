@@ -11,14 +11,6 @@ if [[ ${BUILD_TYPE} == 'MASON' ]]; then
 
 elif [[ ${BUILD_TYPE} == 'LINUX_DEBIAN' ]]; then
 
-    : '
-    TODO remove the use of sudo below
-    https://github.com/travis-ci/travis-ci/issues/3847
-    https://github.com/travis-ci/travis-ci/issues/3846
-    https://github.com/travis-ci/travis-ci/issues/3759
-    '
-    sudo apt-get install -y libtbb-dev libboost1.55-all-dev libstxxl-dev libstxxl1;
-
     TARGET=${TARGET:-Release}
     CXX=${CXX:-g++}
     LD_LIBRARY_PATH=${LD_LIBRARY_PATH:=""}
@@ -48,7 +40,6 @@ elif [[ ${BUILD_TYPE} == 'LINUX_DEBIAN' ]]; then
     make -j${JOBS}
     make install
 
-
     echo "installing custom cmake because the apt package is too old"
     # adapted from https://gist.githubusercontent.com/DennisOSRM/5fad9bee5c7f09fd7fc9/raw/
     cd ${BUILD_DIR}
@@ -59,16 +50,6 @@ elif [[ ${BUILD_TYPE} == 'LINUX_DEBIAN' ]]; then
     cd build
     cmake .. -DCMAKE_CXX_COMPILER="${CXX}" -DCMAKE_INSTALL_PREFIX=${BUILD_DIR}
     make
-    make install
-
-    echo "install osmpbf library because the apt package is too old"
-    # adapted from https://gist.githubusercontent.com/DennisOSRM/13b1b4fe38a57ead850e/raw/install_osmpbf.sh
-    cd ${BUILD_DIR}
-    git clone --depth 1 https://github.com/scrosby/OSM-binary.git
-    cd OSM-binary
-    mkdir build
-    cd build
-    cmake .. -DCMAKE_CXX_COMPILER="${CXX}" -DCMAKE_INSTALL_PREFIX=${BUILD_DIR}
     make install
 
     echo "install success, now setting PATH and LD_LIBRARY_PATH so custom builds are found"
