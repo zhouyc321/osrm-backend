@@ -3,8 +3,6 @@
 set -e -u
 set -o pipefail
 
-source ./scripts/install_osmosis.sh
-
 if [[ ${TRAVIS_BUILD_TYPE} == 'MASON' ]]; then
 
     source ./bootstrap.sh
