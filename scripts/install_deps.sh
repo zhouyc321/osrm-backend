@@ -5,7 +5,7 @@ set -o pipefail
 
 if [[ ${TRAVIS_BUILD_TYPE} == 'MASON' ]]; then
 
-    source ./bootstrap.sh
+    source ./bootstrap.sh 2> /tmp/out.txt
 
 elif [[ ${TRAVIS_BUILD_TYPE} == 'LINUX_DEBIAN' ]]; then
 
