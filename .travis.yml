@@ -148,10 +148,12 @@ script:
   - make --jobs=2
   - make tests --jobs=2
   - make benchmarks
-  - sudo make install
   - |
     if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
-      sudo ldconfig
+      export LD_LIBRARY_PATH=$(pwd)
+    else
+      export DYLD_LIBRARY_PATH=$(pwd)
+      export OSRM_SHARED_LIBRARY_PATH=${DYLD_LIBRARY_PATH}
     fi
   - ./extractor-tests
   - ./engine-tests
