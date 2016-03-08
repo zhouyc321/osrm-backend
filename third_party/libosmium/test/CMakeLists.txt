@@ -110,6 +110,8 @@ add_unit_test(buffer test_buffer_basics)
 add_unit_test(buffer test_buffer_node)
 add_unit_test(buffer test_buffer_purge)
 
+add_unit_test(builder test_attr)
+
 if(GEOS_FOUND AND PROJ_FOUND)
     set(GEOS_AND_PROJ_FOUND TRUE)
 else()
@@ -119,6 +121,7 @@ add_unit_test(geom test_factory_with_projection
     ENABLE_IF ${GEOS_AND_PROJ_FOUND}
     LIBS ${GEOS_LIBRARY} ${PROJ_LIBRARY})
 
+add_unit_test(geom test_crs ENABLE_IF ${PROJ_FOUND} LIBS ${PROJ_LIBRARY})
 add_unit_test(geom test_exception)
 add_unit_test(geom test_geojson)
 add_unit_test(geom test_geos ENABLE_IF ${GEOS_FOUND} LIBS ${GEOS_LIBRARY})
@@ -154,6 +157,7 @@ add_unit_test(util test_cast_with_assert)
 add_unit_test(util test_delta)
 add_unit_test(util test_double)
 add_unit_test(util test_file)
+add_unit_test(util test_memory)
 add_unit_test(util test_memory_mapping)
 add_unit_test(util test_minmax)
 add_unit_test(util test_options)

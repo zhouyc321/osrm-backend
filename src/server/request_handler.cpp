@@ -7,12 +7,15 @@
 #include "util/json_renderer.hpp"
 #include "util/simple_logger.hpp"
 #include "util/string_util.hpp"
-#include "util/xml_renderer.hpp"
 #include "util/typedefs.hpp"
 
 #include "engine/route_parameters.hpp"
 #include "util/json_container.hpp"
 #include "osrm/osrm.hpp"
+
+#include <boost/iostreams/filtering_streambuf.hpp>
+#include <boost/iostreams/copy.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
 
 #include <ctime>
 
@@ -114,16 +117,13 @@ void RequestHandler::handle_request(const http::request &current_request,
         current_reply.headers.emplace_back("Access-Control-Allow-Headers",
                                            "X-Requested-With, Content-Type");
 
-        // set headers
-        current_reply.headers.emplace_back("Content-Length",
-                                           std::to_string(current_reply.content.size()));
-        if ("gpx" == route_parameters.output_format)
-        { // gpx file
-            util::json::gpx_render(current_reply.content, json_result.values["route"]);
-            current_reply.headers.emplace_back("Content-Type",
-                                               "application/gpx+xml; charset=UTF-8");
-            current_reply.headers.emplace_back("Content-Disposition",
-                                               "attachment; filename=\"route.gpx\"");
+        if (route_parameters.service == "tile" && json_result.values.find("pbf") != json_result.values.end())
+        {
+            std::copy(json_result.values["pbf"].get<osrm::util::json::Buffer>().value.cbegin(),
+                      json_result.values["pbf"].get<osrm::util::json::Buffer>().value.cend(),
+                      std::back_inserter(current_reply.content));
+
+            current_reply.headers.emplace_back("Content-Type", "application/x-protobuf");
         }
         else if (route_parameters.jsonp_parameter.empty())
         { // json file
@@ -139,6 +139,8 @@ void RequestHandler::handle_request(const http::request &current_request,
             current_reply.headers.emplace_back("Content-Disposition",
                                                "inline; filename=\"response.js\"");
         }
+        current_reply.headers.emplace_back("Content-Length",
+                                           std::to_string(current_reply.content.size()));
         if (!route_parameters.jsonp_parameter.empty())
         { // append brace to jsonp response
             current_reply.content.push_back(')');

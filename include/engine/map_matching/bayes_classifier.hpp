@@ -6,6 +6,8 @@
 #include <vector>
 #include <utility>
 
+#include <boost/math/constants/constants.hpp>
+
 namespace osrm
 {
 namespace engine
@@ -20,11 +22,13 @@ struct NormalDistribution
     {
     }
 
-    // FIXME implement log-probability version since its faster
+    // FIXME implement log-probability version since it's faster
     double density_function(const double val) const
     {
+        using namespace boost::math::constants;
+
         const double x = val - mean;
-        return 1.0 / (std::sqrt(2. * M_PI) * standard_deviation) *
+        return 1.0 / (std::sqrt(two_pi<double>()) * standard_deviation) *
                std::exp(-x * x / (standard_deviation * standard_deviation));
     }
 
@@ -39,7 +43,7 @@ struct LaplaceDistribution
     {
     }
 
-    // FIXME implement log-probability version since its faster
+    // FIXME implement log-probability version since it's faster
     double density_function(const double val) const
     {
         const double x = std::abs(val - location);

@@ -9,6 +9,7 @@
 #include "engine/plugins/trip.hpp"
 #include "engine/plugins/viaroute.hpp"
 #include "engine/plugins/match.hpp"
+#include "engine/plugins/tile.hpp"
 
 #include "engine/datafacade/datafacade_base.hpp"
 #include "engine/datafacade/internal_datafacade.hpp"
@@ -22,6 +23,7 @@
 #include <boost/assert.hpp>
 #include <boost/interprocess/sync/named_condition.hpp>
 #include <boost/interprocess/sync/scoped_lock.hpp>
+#include <boost/thread/lock_types.hpp>
 
 #include <algorithm>
 #include <fstream>
@@ -55,13 +57,14 @@ Engine::Engine(EngineConfig &config)
         query_data_facade, config.max_locations_distance_table));
     RegisterPlugin(new plugins::HelloWorldPlugin());
     RegisterPlugin(new plugins::NearestPlugin<DataFacade>(query_data_facade));
-    RegisterPlugin(new plugins::MapMatchingPlugin<DataFacade>(
-        query_data_facade, config.max_locations_map_matching));
+    RegisterPlugin(new plugins::MapMatchingPlugin<DataFacade>(query_data_facade,
+                                                              config.max_locations_map_matching));
     RegisterPlugin(new plugins::TimestampPlugin<DataFacade>(query_data_facade));
-    RegisterPlugin(new plugins::ViaRoutePlugin<DataFacade>(query_data_facade,
-                                                           config.max_locations_viaroute));
+    RegisterPlugin(
+        new plugins::ViaRoutePlugin<DataFacade>(query_data_facade, config.max_locations_viaroute));
     RegisterPlugin(
         new plugins::RoundTripPlugin<DataFacade>(query_data_facade, config.max_locations_trip));
+    RegisterPlugin(new plugins::TilePlugin<DataFacade>(query_data_facade));
 }
 
 void Engine::RegisterPlugin(plugins::BasePlugin *raw_plugin_ptr)
@@ -71,8 +74,7 @@ void Engine::RegisterPlugin(plugins::BasePlugin *raw_plugin_ptr)
     plugin_map[plugin_ptr->GetDescriptor()] = std::move(plugin_ptr);
 }
 
-int Engine::RunQuery(const RouteParameters &route_parameters,
-                              util::json::Object &json_result)
+int Engine::RunQuery(const RouteParameters &route_parameters, util::json::Object &json_result)
 {
     const auto &plugin_iterator = plugin_map.find(route_parameters.service);
 
@@ -84,14 +86,17 @@ int Engine::RunQuery(const RouteParameters &route_parameters,
 
     osrm::engine::plugins::BasePlugin::Status return_code;
     increase_concurrent_query_count();
-    if (barrier) {
+    if (barrier)
+    {
         // Get a shared data lock so that other threads won't update
         // things while the query is running
         boost::shared_lock<boost::shared_mutex> data_lock{
-                    (static_cast<datafacade::SharedDataFacade<contractor::QueryEdge::EdgeData> *>(
-                            query_data_facade))->data_mutex};
+            (static_cast<datafacade::SharedDataFacade<contractor::QueryEdge::EdgeData> *>(
+                 query_data_facade))->data_mutex};
         return_code = plugin_iterator->second->HandleRequest(route_parameters, json_result);
-    } else {
+    }
+    else
+    {
         return_code = plugin_iterator->second->HandleRequest(route_parameters, json_result);
     }
     decrease_concurrent_query_count();
@@ -143,9 +148,7 @@ void Engine::increase_concurrent_query_count()
     ++(barrier->number_of_queries);
 
     (static_cast<datafacade::SharedDataFacade<contractor::QueryEdge::EdgeData> *>(
-         query_data_facade))
-        ->CheckAndReloadFacade();
+         query_data_facade))->CheckAndReloadFacade();
 }
-
 }
 }

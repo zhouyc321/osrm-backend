@@ -44,6 +44,13 @@ template <class DataFacadeT> class DistanceTablePlugin final : public BasePlugin
     Status HandleRequest(const RouteParameters &route_parameters,
                          util::json::Object &json_result) override final
     {
+        return NonConstHandleRequest(route_parameters, json_result);
+    }
+
+    // XXX: should be const-ref, but we need to artificially source, destination values
+    // so consider this a hack for 4.9, in 5.0 we refactored and handle it beautifully!
+    Status NonConstHandleRequest(RouteParameters route_parameters, util::json::Object &json_result)
+    {
         if (!check_all_coordinates(route_parameters.coordinates))
         {
             json_result.values["status_message"] = "Coordinates are invalid";
@@ -59,18 +66,35 @@ template <class DataFacadeT> class DistanceTablePlugin final : public BasePlugin
             return Status::Error;
         }
 
-        auto number_of_sources =
-            std::count_if(route_parameters.is_source.begin(), route_parameters.is_source.end(),
-                          [](const bool is_source)
-                          {
-                              return is_source;
-                          });
-        auto number_of_destination =
-            std::count_if(route_parameters.is_destination.begin(),
-                          route_parameters.is_destination.end(), [](const bool is_destination)
-                          {
-                              return is_destination;
-                          });
+        const auto number_of_coordinates = route_parameters.coordinates.size();
+
+        BOOST_ASSERT(route_parameters.is_source.size() <= number_of_coordinates);
+        BOOST_ASSERT(route_parameters.is_destination.size() <= number_of_coordinates);
+
+        // The check_all_coordinates guard above makes sure we have at least 2 coordinates.
+        // This establishes the parallel array invariant for is_source, is_destination, coordinates
+        if (route_parameters.is_source.size() == 0)
+        {
+            const auto where = route_parameters.is_source.end();
+            const auto n = number_of_coordinates - route_parameters.is_source.size();
+            route_parameters.is_source.insert(where, n, true);
+        }
+
+        if (route_parameters.is_destination.size() == 0)
+        {
+            const auto where = route_parameters.is_destination.end();
+            const auto n = number_of_coordinates - route_parameters.is_destination.size();
+            route_parameters.is_destination.insert(where, n, true);
+        }
+
+        // parallel array invariant
+        BOOST_ASSERT(route_parameters.coordinates.size() == route_parameters.is_source.size());
+        BOOST_ASSERT(route_parameters.coordinates.size() == route_parameters.is_destination.size());
+
+        const auto number_of_sources = std::count(route_parameters.is_source.begin(), //
+                                                  route_parameters.is_source.end(), true);
+        const auto number_of_destination = std::count(route_parameters.is_destination.begin(), //
+                                                      route_parameters.is_destination.end(), true);
 
         if (max_locations_distance_table > 0 &&
             (number_of_sources * number_of_destination >
@@ -94,8 +118,7 @@ template <class DataFacadeT> class DistanceTablePlugin final : public BasePlugin
             if (checksum_OK && i < route_parameters.hints.size() &&
                 !route_parameters.hints[i].empty())
             {
-                PhantomNode current_phantom_node;
-                ObjectEncoder::DecodeFromBase64(route_parameters.hints[i], current_phantom_node);
+                auto current_phantom_node = decodeBase64<PhantomNode>(route_parameters.hints[i]);
                 if (current_phantom_node.IsValid(facade->GetNumberOfNodes()))
                 {
                     if (route_parameters.is_source[i])
@@ -124,6 +147,7 @@ template <class DataFacadeT> class DistanceTablePlugin final : public BasePlugin
             const int range = input_bearings.size() > 0
                                   ? (input_bearings[i].second ? *input_bearings[i].second : 10)
                                   : 180;
+
             if (route_parameters.is_source[i])
             {
                 *phantom_node_source_out_iter =

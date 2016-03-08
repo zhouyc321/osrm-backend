@@ -33,9 +33,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <variant/variant.hpp>
 
-#include <iostream>
 #include <vector>
 #include <string>
+#include <utility>
 #include <unordered_map>
 
 namespace osrm
@@ -50,18 +50,27 @@ namespace json
 struct Object;
 struct Array;
 
+// For encoding raw binary data in a JSON response
+struct Buffer
+{
+    Buffer() = default;
+    Buffer(const char *value) : value(value) {}
+    Buffer(std::string value) : value(std::move(value)) {}
+    std::string value;
+};
+
 struct String
 {
-    String() {}
-    String(const char *value) : value(value) {}
-    String(std::string value) : value(std::move(value)) {}
+    String() = default;
+    String(const char *value_) : value{value_} {}
+    String(std::string value_) : value{std::move(value_)} {}
     std::string value;
 };
 
 struct Number
 {
-    Number() {}
-    Number(double value) : value(static_cast<double>(value)) {}
+    Number() = default;
+    Number(double value_) : value{value_} {}
     double value;
 };
 
@@ -78,6 +87,7 @@ struct Null
 };
 
 using Value = mapbox::util::variant<String,
+                                    Buffer,
                                     Number,
                                     mapbox::util::recursive_wrapper<Object>,
                                     mapbox::util::recursive_wrapper<Array>,

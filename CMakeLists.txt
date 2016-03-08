@@ -9,7 +9,7 @@ endif()
 project(OSRM C CXX)
 set(OSRM_VERSION_MAJOR 4)
 set(OSRM_VERSION_MINOR 9)
-set(OSRM_VERSION_PATCH 0)
+set(OSRM_VERSION_PATCH 1)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(CheckCXXCompilerFlag)
@@ -29,8 +29,8 @@ if(WIN32 AND MSVC_VERSION LESS 1800)
   message(FATAL_ERROR "Building with Microsoft compiler needs Visual Studio 2013 or later (Express version works too)")
 endif()
 
+option(ENABLE_CCACHE "Speed up incremental rebuilds via ccache" ON)
 option(ENABLE_JSON_LOGGING "Adds additional JSON debug logging to the response" OFF)
-option(DEBUG_GEOMETRY "Enables an option to dump GeoJSON of the final routing graph" OFF)
 option(BUILD_TOOLS "Build OSRM tools" OFF)
 option(ENABLE_ASSERTIONS OFF)
 
@@ -76,7 +76,7 @@ add_dependencies(UTIL FingerPrintConfigure)
 set_target_properties(UTIL PROPERTIES LINKER_LANGUAGE CXX)
 
 add_executable(osrm-extract src/tools/extract.cpp)
-add_executable(osrm-prepare src/tools/contract.cpp)
+add_executable(osrm-contract src/tools/contract.cpp)
 add_executable(osrm-routed src/tools/routed.cpp $<TARGET_OBJECTS:SERVER> $<TARGET_OBJECTS:UTIL>)
 add_executable(osrm-datastore src/tools/store.cpp $<TARGET_OBJECTS:UTIL>)
 add_library(osrm src/osrm/osrm.cpp $<TARGET_OBJECTS:ENGINE> $<TARGET_OBJECTS:UTIL>)
@@ -91,6 +91,9 @@ add_executable(util-tests EXCLUDE_FROM_ALL unit_tests/util_tests.cpp ${UtilTests
 
 # Benchmarks
 add_executable(rtree-bench EXCLUDE_FROM_ALL src/benchmarks/static_rtree.cpp $<TARGET_OBJECTS:UTIL>)
+
+target_include_directories(util-tests PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/unit_tests)
+target_include_directories(rtree-bench PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/unit_tests)
 
 # Check the release mode
 if(NOT CMAKE_BUILD_TYPE MATCHES Debug)
@@ -153,7 +156,7 @@ endif()
 
 # Configuring compilers
 if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic -Wuninitialized -Wunreachable-code -Wstrict-overflow=2 -D_FORTIFY_SOURCE=2 -fPIC")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic -Wuninitialized -Wunreachable-code -Wstrict-overflow=2 -D_FORTIFY_SOURCE=2 -fPIC -fcolor-diagnostics")
 elseif(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
   set(COLOR_FLAG "-fdiagnostics-color=auto")
   check_cxx_compiler_flag("-fdiagnostics-color=auto" HAS_COLOR_FLAG)
@@ -163,7 +166,6 @@ elseif(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
   # using GCC
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic -Wuninitialized -Wunreachable-code -Wstrict-overflow=1 -D_FORTIFY_SOURCE=2 ${COLOR_FLAG} -fPIC")
   if(WIN32) # using mingw
-    add_definitions(-D_USE_MATH_DEFINES) # define M_PI, M_1_PI etc.
     add_definitions(-DWIN32)
     set(OPTIONAL_SOCKET_LIBS ws2_32 wsock32)
   endif()
@@ -175,7 +177,6 @@ elseif(${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
   set(BOOST_COMPONENTS ${BOOST_COMPONENTS} date_time chrono zlib)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
   add_definitions(-DNOMINMAX) # avoid min and max macros that can break compilation
-  add_definitions(-D_USE_MATH_DEFINES) # define M_PI
   add_definitions(-D_WIN32_WINNT=0x0501)
   add_definitions(-DXML_STATIC)
   find_library(ws2_32_LIBRARY_PATH ws2_32)
@@ -233,9 +234,7 @@ include_directories(SYSTEM ${OSMIUM_INCLUDE_DIRS})
 
 
 find_package(Boost 1.49.0 COMPONENTS ${BOOST_COMPONENTS} REQUIRED)
-if(NOT Boost_FOUND)
-  message(FATAL_ERROR "Fatal error: Boost (version >= 1.49.0) required.\n")
-endif()
+add_definitions(-DBOOST_TEST_DYN_LINK -DBOOST_SPIRIT_USE_PHOENIX_V3 -DBOOST_RESULT_OF_USE_DECLTYPE)
 include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 
 find_package(Threads REQUIRED)
@@ -280,16 +279,10 @@ if (ENABLE_JSON_LOGGING)
   add_definitions(-DENABLE_JSON_LOGGING)
 endif()
 
-if (DEBUG_GEOMETRY)
-  message(STATUS "Enabling final edge weight GeoJSON output option")
-  add_definitions(-DDEBUG_GEOMETRY)
-endif()
-
-
 # Binaries
 target_link_libraries(osrm-datastore osrm_store ${Boost_LIBRARIES})
 target_link_libraries(osrm-extract osrm_extract ${Boost_LIBRARIES})
-target_link_libraries(osrm-prepare osrm_contract ${Boost_LIBRARIES})
+target_link_libraries(osrm-contract osrm_contract ${Boost_LIBRARIES})
 target_link_libraries(osrm-routed osrm ${Boost_LIBRARIES} ${OPTIONAL_SOCKET_LIBS} ${ZLIB_LIBRARY})
 
 set(EXTRACTOR_LIBRARIES
@@ -374,7 +367,7 @@ endif()
 # (i.e., from /usr/local/bin/) the linker can find library dependencies. For
 # more info see http://www.cmake.org/Wiki/CMake_RPATH_handling
 set_property(TARGET osrm-extract PROPERTY INSTALL_RPATH_USE_LINK_PATH TRUE)
-set_property(TARGET osrm-prepare PROPERTY INSTALL_RPATH_USE_LINK_PATH TRUE)
+set_property(TARGET osrm-contract PROPERTY INSTALL_RPATH_USE_LINK_PATH TRUE)
 set_property(TARGET osrm-datastore PROPERTY INSTALL_RPATH_USE_LINK_PATH TRUE)
 set_property(TARGET osrm-routed PROPERTY INSTALL_RPATH_USE_LINK_PATH TRUE)
 
@@ -392,7 +385,7 @@ install(FILES ${ContractorHeader} DESTINATION include/osrm/contractor)
 install(FILES ${LibraryGlob} DESTINATION include/osrm)
 install(FILES ${VariantGlob} DESTINATION include/variant)
 install(TARGETS osrm-extract DESTINATION bin)
-install(TARGETS osrm-prepare DESTINATION bin)
+install(TARGETS osrm-contract DESTINATION bin)
 install(TARGETS osrm-datastore DESTINATION bin)
 install(TARGETS osrm-routed DESTINATION bin)
 install(TARGETS osrm DESTINATION lib)
@@ -429,7 +422,7 @@ COMMENT "Generating API documentation with Doxygen" VERBATIM
 endif()
 
 # prefix compilation with ccache by default if available and on clang or gcc
-if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
+if(ENABLE_CCACHE AND (${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU"))
   find_program(CCACHE_FOUND ccache)
   if(CCACHE_FOUND)
     message(STATUS "Using ccache to speed up incremental builds")

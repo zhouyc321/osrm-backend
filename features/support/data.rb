@@ -218,8 +218,8 @@ def extracted_file
   @extracted_file ||= "#{osm_file}_#{fingerprint_extract}"
 end
 
-def prepared_file
-  @prepared_file ||= "#{osm_file}_#{fingerprint_extract}_#{fingerprint_prepare}"
+def contracted_file
+  @contracted_file ||= "#{osm_file}_#{fingerprint_extract}_#{fingerprint_prepare}"
 end
 
 def write_osm
@@ -237,14 +237,14 @@ def extracted?
   end
 end
 
-def prepared?
+def contracted?
   Dir.chdir TEST_FOLDER do
-    File.exist?("#{prepared_file}.osrm.hsgr")
+    File.exist?("#{contracted_file}.osrm.hsgr")
   end
 end
 
 def write_timestamp
-  File.open( "#{prepared_file}.osrm.timestamp", 'w') {|f| f.write(OSM_TIMESTAMP) }
+  File.open( "#{contracted_file}.osrm.timestamp", 'w') {|f| f.write(OSM_TIMESTAMP) }
 end
 
 def write_input_data
@@ -258,6 +258,7 @@ def extract_data
   Dir.chdir TEST_FOLDER do
     log_preprocess_info
     log "== Extracting #{osm_file}.osm...", :preprocess
+    log "#{LOAD_LIBRARIES}#{BIN_PATH}/osrm-extract #{osm_file}.osm #{@extract_args} --profile #{PROFILES_PATH}/#{@profile}.lua >>#{PREPROCESS_LOG_FILE} 2>&1"
     unless system "#{LOAD_LIBRARIES}#{BIN_PATH}/osrm-extract #{osm_file}.osm #{@extract_args} --profile #{PROFILES_PATH}/#{@profile}.lua >>#{PREPROCESS_LOG_FILE} 2>&1"
       log "*** Exited with code #{$?.exitstatus}.", :preprocess
       raise ExtractError.new $?.exitstatus, "osrm-extract exited with code #{$?.exitstatus}."
@@ -270,6 +271,16 @@ def extract_data
     rescue Exception => e
       raise FileError.new nil, "failed to rename data file after extracting."
     end
+    begin
+      ["osrm.edge_segment_lookup","osrm.edge_penalties"].each do |file|
+        if File.exists?("#{osm_file}.#{file}")
+          log "Renaming #{osm_file}.#{file} to #{extracted_file}.#{file}", :preprocess
+          File.rename "#{osm_file}.#{file}", "#{extracted_file}.#{file}"
+        end
+      end
+    rescue Exception => e
+      raise FileError.new nil, "failed to rename data file after extracting."
+    end
   end
 end
 
@@ -277,22 +288,23 @@ def prepare_data
   Dir.chdir TEST_FOLDER do
     log_preprocess_info
     log "== Preparing #{extracted_file}.osm...", :preprocess
-    unless system "#{LOAD_LIBRARIES}#{BIN_PATH}/osrm-prepare #{extracted_file}.osrm  --profile #{PROFILES_PATH}/#{@profile}.lua >>#{PREPROCESS_LOG_FILE} 2>&1"
+    log "#{LOAD_LIBRARIES}#{BIN_PATH}/osrm-contract #{@contract_args} #{extracted_file}.osrm >>#{PREPROCESS_LOG_FILE} 2>&1"
+    unless system "#{LOAD_LIBRARIES}#{BIN_PATH}/osrm-contract #{@contract_args} #{extracted_file}.osrm >>#{PREPROCESS_LOG_FILE} 2>&1"
       log "*** Exited with code #{$?.exitstatus}.", :preprocess
-      raise PrepareError.new $?.exitstatus, "osrm-prepare exited with code #{$?.exitstatus}."
+      raise PrepareError.new $?.exitstatus, "osrm-contract exited with code #{$?.exitstatus}."
     end
     begin
       ["osrm.hsgr","osrm.fileIndex","osrm.geometry","osrm.nodes","osrm.ramIndex","osrm.core","osrm.edges"].each do |file|
-        log "Renaming #{extracted_file}.#{file} to #{prepared_file}.#{file}", :preprocess
-        File.rename "#{extracted_file}.#{file}", "#{prepared_file}.#{file}"
+        log "Renaming #{extracted_file}.#{file} to #{contracted_file}.#{file}", :preprocess
+        File.rename "#{extracted_file}.#{file}", "#{contracted_file}.#{file}"
       end
     rescue Exception => e
       raise FileError.new nil, "failed to rename data file after preparing."
     end
     begin
       ["osrm.names","osrm.restrictions","osrm"].each do |file|
-        log "Copying #{extracted_file}.#{file} to #{prepared_file}.#{file}", :preprocess
-        FileUtils.cp "#{extracted_file}.#{file}", "#{prepared_file}.#{file}"
+        log "Copying #{extracted_file}.#{file} to #{contracted_file}.#{file}", :preprocess
+        FileUtils.cp "#{extracted_file}.#{file}", "#{contracted_file}.#{file}"
       end
     rescue Exception => e
       raise FileError.new nil, "failed to copy data file after preparing."
@@ -304,6 +316,6 @@ end
 def reprocess
   write_input_data
   extract_data unless extracted?
-  prepare_data unless prepared?
+  prepare_data unless contracted?
   log_preprocess_done
 end

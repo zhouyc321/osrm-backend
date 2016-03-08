@@ -16,6 +16,18 @@ template <typename Iterator, class HandlerT> struct APIGrammar : qi::grammar<Ite
 {
     explicit APIGrammar(HandlerT *h) : APIGrammar::base_type(api_call), handler(h)
     {
+        const auto set_x_wrapper = [this](const int x, bool &pass)
+        {
+            pass = handler->SetX(x);
+        };
+        const auto set_y_wrapper = [this](const int y, bool &pass)
+        {
+            pass = handler->SetY(y);
+        };
+        const auto set_z_wrapper = [this](const int z, bool &pass)
+        {
+            pass = handler->SetZ(z);
+        };
         const auto add_bearing_wrapper = [this](
             const boost::fusion::vector<int, boost::optional<int>> &received_bearing, bool &pass)
         {
@@ -47,7 +59,7 @@ template <typename Iterator, class HandlerT> struct APIGrammar : qi::grammar<Ite
         query = ('?') >> +(zoom | output | jsonp | checksum | uturns | location_with_options |
                            destination_with_options | source_with_options | cmp | language |
                            instruction | geometry | alt_route | old_API | num_results |
-                           matching_beta | gps_precision | classify | locs);
+                           matching_beta | gps_precision | classify | locs | x | y | z);
         // all combinations of timestamp, uturn, hint and bearing without duplicates
         t_u = (u >> -timestamp) | (timestamp >> -u);
         t_h = (hint >> -timestamp) | (timestamp >> -hint);
@@ -62,8 +74,7 @@ template <typename Iterator, class HandlerT> struct APIGrammar : qi::grammar<Ite
         destination_with_options = destination >> -location_options;
         zoom = (-qi::lit('&')) >> qi::lit('z') >> '=' >>
                qi::short_[boost::bind(&HandlerT::SetZoomLevel, handler, ::_1)];
-        output = (-qi::lit('&')) >> qi::lit("output") >> '=' >>
-                 string[boost::bind(&HandlerT::SetOutputFormat, handler, ::_1)];
+        output = (-qi::lit('&')) >> qi::lit("output=json");
         jsonp = (-qi::lit('&')) >> qi::lit("jsonp") >> '=' >>
                 stringwithPercent[boost::bind(&HandlerT::SetJSONpParameter, handler, ::_1)];
         checksum = (-qi::lit('&')) >> qi::lit("checksum") >> '=' >>
@@ -111,6 +122,13 @@ template <typename Iterator, class HandlerT> struct APIGrammar : qi::grammar<Ite
         locs = (-qi::lit('&')) >> qi::lit("locs") >> '=' >>
                stringforPolyline[boost::bind(&HandlerT::SetCoordinatesFromGeometry, handler, ::_1)];
 
+        x = (-qi::lit('&')) >> qi::lit("tx") >> '=' >>
+            qi::int_[boost::bind<void>(set_x_wrapper, ::_1, ::_3)];
+        y = (-qi::lit('&')) >> qi::lit("ty") >> '=' >>
+            qi::int_[boost::bind<void>(set_y_wrapper, ::_1, ::_3)];
+        z = (-qi::lit('&')) >> qi::lit("tz") >> '=' >>
+            qi::int_[boost::bind<void>(set_z_wrapper, ::_1, ::_3)];
+
         string = +(qi::char_("a-zA-Z"));
         stringwithDot = +(qi::char_("a-zA-Z0-9_.-"));
         stringwithPercent = +(qi::char_("a-zA-Z0-9_.-") | qi::char_('[') | qi::char_(']') |
@@ -123,7 +141,7 @@ template <typename Iterator, class HandlerT> struct APIGrammar : qi::grammar<Ite
     qi::rule<Iterator, std::string()> service, zoom, output, string, jsonp, checksum, location,
         destination, source, hint, timestamp, bearing, stringwithDot, stringwithPercent, language,
         geometry, cmp, alt_route, u, uturns, old_API, num_results, matching_beta, gps_precision,
-        classify, locs, instruction, stringforPolyline;
+        classify, locs, instruction, stringforPolyline, x, y, z;
 
     HandlerT *handler;
 };

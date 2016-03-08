@@ -14,3 +14,7 @@ end
 def set_extract_args args
     @extract_args = args
 end
+
+def set_contract_args args
+    @contract_args = args
+end

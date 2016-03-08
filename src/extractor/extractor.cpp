@@ -67,8 +67,8 @@ namespace extractor
  *
  * The result of this process are the following files:
  *  .names : Names of all streets, stored as long consecutive string with prefix sum based index
- *  .osrm  : Nodes and edges in a intermediate format that easy to digest for osrm-prepare
- *  .restrictions : Turn restrictions that are used my osrm-prepare to construct the edge-expanded
+ *  .osrm  : Nodes and edges in a intermediate format that easy to digest for osrm-contract
+ *  .restrictions : Turn restrictions that are used by osrm-contract to construct the edge-expanded
  * graph
  *
  */
@@ -263,13 +263,13 @@ int Extractor::run()
 
         TIMER_START(expansion);
 
-        std::vector<EdgeBasedNode> node_based_edge_list;
+        std::vector<EdgeBasedNode> edge_based_node_list;
         util::DeallocatingVector<EdgeBasedEdge> edge_based_edge_list;
         std::vector<bool> node_is_startpoint;
         std::vector<EdgeWeight> edge_based_node_weights;
         std::vector<QueryNode> internal_to_external_node_map;
         auto graph_size = BuildEdgeExpandedGraph(internal_to_external_node_map,
-                                                 node_based_edge_list, node_is_startpoint,
+                                                 edge_based_node_list, node_is_startpoint,
                                                  edge_based_node_weights, edge_based_edge_list);
 
         auto number_of_node_based_nodes = graph_size.first;
@@ -288,9 +288,9 @@ int Extractor::run()
         util::SimpleLogger().Write() << "building r-tree ...";
         TIMER_START(rtree);
 
-        FindComponents(max_edge_id, edge_based_edge_list, node_based_edge_list);
+        FindComponents(max_edge_id, edge_based_edge_list, edge_based_node_list);
 
-        BuildRTree(std::move(node_based_edge_list), std::move(node_is_startpoint),
+        BuildRTree(std::move(edge_based_node_list), std::move(node_is_startpoint),
                    internal_to_external_node_map);
 
         TIMER_STOP(rtree);
@@ -304,7 +304,7 @@ int Extractor::run()
             << "Expansion  : " << (number_of_node_based_nodes / TIMER_SEC(expansion))
             << " nodes/sec and " << ((max_edge_id + 1) / TIMER_SEC(expansion)) << " edges/sec";
         util::SimpleLogger().Write() << "To prepare the data for routing, run: "
-                                     << "./osrm-prepare " << config.output_file_name << std::endl;
+                                     << "./osrm-contract " << config.output_file_name << std::endl;
     }
     catch (const std::exception &e)
     {
@@ -517,12 +517,12 @@ Extractor::BuildEdgeExpandedGraph(std::vector<QueryNode> &internal_to_external_n
     graph_compressor.Compress(barrier_nodes, traffic_lights, *restriction_map, *node_based_graph,
                               compressed_edge_container);
 
+    compressed_edge_container.SerializeInternalVector(config.geometry_output_path);
+
     EdgeBasedGraphFactory edge_based_graph_factory(
         node_based_graph, compressed_edge_container, barrier_nodes, traffic_lights,
         std::const_pointer_cast<RestrictionMap const>(restriction_map),
         internal_to_external_node_map, speed_profile);
-
-    compressed_edge_container.SerializeInternalVector(config.geometry_output_path);
 
     edge_based_graph_factory.Run(config.edge_output_path, lua_state,
                                  config.edge_segment_lookup_path, config.edge_penalty_path,
@@ -532,6 +532,7 @@ Extractor::BuildEdgeExpandedGraph(std::vector<QueryNode> &internal_to_external_n
                                  config.debug_turns_path
 #endif
                                  );
+
     lua_close(lua_state);
 
     edge_based_graph_factory.GetEdgeBasedEdges(edge_based_edge_list);

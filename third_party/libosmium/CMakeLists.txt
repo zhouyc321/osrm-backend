@@ -24,8 +24,8 @@ set(CMAKE_CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo;MinSizeRel;Dev;Cover
 project(libosmium)
 
 set(LIBOSMIUM_VERSION_MAJOR 2)
-set(LIBOSMIUM_VERSION_MINOR 5)
-set(LIBOSMIUM_VERSION_PATCH 4)
+set(LIBOSMIUM_VERSION_MINOR 6)
+set(LIBOSMIUM_VERSION_PATCH 1)
 
 set(LIBOSMIUM_VERSION
     "${LIBOSMIUM_VERSION_MAJOR}.${LIBOSMIUM_VERSION_MINOR}.${LIBOSMIUM_VERSION_PATCH}")
@@ -57,6 +57,8 @@ option(BUILD_DATA_TESTS "compile data tests, please run them with ctest" ${dev_b
 option(INSTALL_GDALCPP   "also install gdalcpp headers" OFF)
 option(INSTALL_PROTOZERO "also install protozero headers" OFF)
 option(INSTALL_UTFCPP    "also install utfcpp headers" OFF)
+
+option(WITH_PROFILING    "add flags needed for profiling" OFF)
 
 
 #-----------------------------------------------------------------------------
@@ -205,12 +207,17 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${USUAL_COMPILE_OPTIONS}"
     CACHE STRING "Flags used by the compiler during RELWITHDEBINFO builds."
     FORCE)
 
+if(WITH_PROFILING)
+    add_definitions(-fno-omit-frame-pointer)
+endif()
+
 
 #-----------------------------------------------------------------------------
 #
 #  Build Type
 #
 #-----------------------------------------------------------------------------
+
 # In 'Dev' mode: compile with very strict warnings and turn them into errors.
 if(CMAKE_BUILD_TYPE STREQUAL "Dev")
     if(NOT MSVC)
@@ -459,7 +466,7 @@ endif()
 install(DIRECTORY include/osmium DESTINATION include)
 
 if(INSTALL_GDALCPP)
-    install(include/gdalcpp.hpp DESTINATION include)
+    install(FILES include/gdalcpp.hpp DESTINATION include)
 endif()
 
 if(INSTALL_PROTOZERO)
@@ -467,7 +474,7 @@ if(INSTALL_PROTOZERO)
 endif()
 
 if(INSTALL_UTFCPP)
-    install(include/utf8.hpp DESTINATION include)
+    install(FILES include/utf8.h DESTINATION include)
     install(DIRECTORY include/utf8 DESTINATION include)
 endif()
 

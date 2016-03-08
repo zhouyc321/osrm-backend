@@ -3,8 +3,6 @@
 
 #include "util/typedefs.hpp"
 
-#include <boost/assert.hpp>
-
 #include "osrm/coordinate.hpp"
 
 #include <limits>
@@ -19,7 +17,7 @@ struct QueryNode
     using key_type = OSMNodeID; // type of NodeID
     using value_type = int;     // type of lat,lons
 
-    explicit QueryNode(int lat, int lon, OSMNodeID node_id)
+    explicit QueryNode(int lat, int lon, key_type node_id)
         : lat(lat), lon(lon), node_id(std::move(node_id))
     {
     }
@@ -31,7 +29,7 @@ struct QueryNode
 
     int lat;
     int lon;
-    OSMNodeID node_id;
+    key_type node_id;
 
     static QueryNode min_value()
     {
@@ -43,21 +41,6 @@ struct QueryNode
     {
         return QueryNode(static_cast<int>(90 * COORDINATE_PRECISION),
                          static_cast<int>(180 * COORDINATE_PRECISION), MAX_OSM_NODEID);
-    }
-
-    value_type operator[](const std::size_t n) const
-    {
-        switch (n)
-        {
-        case 1:
-            return lat;
-        case 0:
-            return lon;
-        default:
-            break;
-        }
-        BOOST_ASSERT_MSG(false, "should not happen");
-        return std::numeric_limits<int>::lowest();
     }
 };
 }

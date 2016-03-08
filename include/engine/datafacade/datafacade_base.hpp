@@ -8,7 +8,7 @@
 #include "engine/phantom_node.hpp"
 #include "extractor/turn_instructions.hpp"
 #include "util/integer_range.hpp"
-#include "util/osrm_exception.hpp"
+#include "util/exception.hpp"
 #include "util/string_util.hpp"
 #include "util/typedefs.hpp"
 
@@ -69,12 +69,20 @@ template <class EdgeDataT> class BaseDataFacade
 
     virtual unsigned GetGeometryIndexForEdgeID(const unsigned id) const = 0;
 
-    virtual void GetUncompressedGeometry(const unsigned id,
-                                         std::vector<unsigned> &result_nodes) const = 0;
+    virtual void GetUncompressedGeometry(const EdgeID id,
+                                         std::vector<NodeID> &result_nodes) const = 0;
+
+    // Gets the weight values for each segment in an uncompressed geometry.
+    // Should always be 1 shorter than GetUncompressedGeometry
+    virtual void GetUncompressedWeights(const EdgeID id,
+                                         std::vector<EdgeWeight> &result_weights) const = 0;
 
     virtual extractor::TurnInstruction GetTurnInstructionForEdgeID(const unsigned id) const = 0;
 
     virtual extractor::TravelMode GetTravelModeForEdgeID(const unsigned id) const = 0;
+
+    virtual std::vector<RTreeLeaf> GetEdgesInBox(const util::FixedPointCoordinate &south_west,
+                                                 const util::FixedPointCoordinate &north_east) = 0;
 
     virtual std::vector<PhantomNodeWithDistance>
     NearestPhantomNodesInRange(const util::FixedPointCoordinate input_coordinate,

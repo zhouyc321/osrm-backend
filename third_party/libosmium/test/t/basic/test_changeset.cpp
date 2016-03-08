@@ -2,27 +2,27 @@
 
 #include <boost/crc.hpp>
 
+#include <osmium/builder/attr.hpp>
 #include <osmium/osm/changeset.hpp>
 #include <osmium/osm/crc.hpp>
 
-#include "helper.hpp"
+using namespace osmium::builder::attr;
 
-TEST_CASE("Basic Changeset") {
-
-    osmium::CRC<boost::crc_32_type> crc32;
-
+TEST_CASE("Build changeset") {
     osmium::memory::Buffer buffer(10 * 1000);
 
-    osmium::Changeset& cs1 = buffer_add_changeset(buffer,
-        "user",
-        {{"comment", "foo"}});
+    osmium::builder::add_changeset(buffer,
+        _cid(42),
+        _created_at(time_t(100)),
+        _closed_at(time_t(200)),
+        _num_changes(7),
+        _num_comments(3),
+        _uid(9),
+        _user("user"),
+        _tag("comment", "foo")
+    );
 
-    cs1.set_id(42)
-       .set_created_at(100)
-       .set_closed_at(200)
-       .set_num_changes(7)
-       .set_num_comments(3)
-       .set_uid(9);
+    const osmium::Changeset& cs1 = buffer.get<osmium::Changeset>(0);
 
     REQUIRE(42 == cs1.id());
     REQUIRE(9 == cs1.uid());
@@ -34,18 +34,24 @@ TEST_CASE("Basic Changeset") {
     REQUIRE(1 == cs1.tags().size());
     REQUIRE(std::string("user") == cs1.user());
 
+    osmium::CRC<boost::crc_32_type> crc32;
     crc32.update(cs1);
     REQUIRE(crc32().checksum() == 0x502e8c0e);
 
-    osmium::Changeset& cs2 = buffer_add_changeset(buffer,
-        "user",
-        {{"comment", "foo"}, {"foo", "bar"}});
+    auto pos = osmium::builder::add_changeset(buffer,
+        _cid(43),
+        _created_at(time_t(120)),
+        _num_changes(21),
+        _num_comments(0),
+        _uid(9),
+        _user("user"),
+        _tag("comment", "foo"),
+        _tag("foo", "bar"),
+        _comment({time_t(300), 10, "user2", "foo"}),
+        _comments({{time_t(400), 9, "user", "bar"}})
+    );
 
-    cs2.set_id(43)
-       .set_created_at(120)
-       .set_num_changes(21)
-       .set_num_comments(osmium::num_comments_type(0))
-       .set_uid(9);
+    const osmium::Changeset& cs2 = buffer.get<osmium::Changeset>(pos);
 
     REQUIRE(43 == cs2.id());
     REQUIRE(9 == cs2.uid());
@@ -64,6 +70,21 @@ TEST_CASE("Basic Changeset") {
     REQUIRE(false == (cs1 > cs2));
     REQUIRE(false == (cs1 >= cs2));
 
+    auto cit = cs2.discussion().begin();
+
+    REQUIRE(cit != cs2.discussion().end());
+    REQUIRE(cit->date() == osmium::Timestamp(300));
+    REQUIRE(cit->uid() == 10);
+    REQUIRE(std::string("user2") == cit->user());
+    REQUIRE(std::string("foo") == cit->text());
+
+    REQUIRE(++cit != cs2.discussion().end());
+    REQUIRE(cit->date() == osmium::Timestamp(400));
+    REQUIRE(cit->uid() == 9);
+    REQUIRE(std::string("user") == cit->user());
+    REQUIRE(std::string("bar") == cit->text());
+
+    REQUIRE(++cit == cs2.discussion().end());
 }
 
 TEST_CASE("Create changeset without helper") {
@@ -79,10 +100,11 @@ TEST_CASE("Create changeset without helper") {
        .set_uid(9);
 
     builder.add_user("user");
-    add_tags(buffer, builder, {
-        {"key1", "val1"},
-        {"key2", "val2"}
-    });
+    {
+        osmium::builder::TagListBuilder tl_builder(buffer, &builder);
+        tl_builder.add_tag("key1", "val1");
+        tl_builder.add_tag("key2", "val2");
+    }
 
     {
         osmium::builder::ChangesetDiscussionBuilder disc_builder(buffer, &builder);

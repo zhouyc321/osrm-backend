@@ -8,7 +8,6 @@
 #include "engine/search_engine.hpp"
 #include "util/for_each_pair.hpp"
 #include "util/integer_range.hpp"
-#include "util/json_renderer.hpp"
 #include "util/make_unique.hpp"
 #include "util/simple_logger.hpp"
 #include "util/timing_util.hpp"
@@ -83,8 +82,8 @@ template <class DataFacadeT> class ViaRoutePlugin final : public BasePlugin
             if (checksum_OK && i < route_parameters.hints.size() &&
                 !route_parameters.hints[i].empty())
             {
-                ObjectEncoder::DecodeFromBase64(route_parameters.hints[i],
-                                                phantom_node_pair_list[i].first);
+                phantom_node_pair_list[i].first =
+                    decodeBase64<PhantomNode>(route_parameters.hints[i]);
                 if (phantom_node_pair_list[i].first.IsValid(facade->GetNumberOfNodes()))
                 {
                     continue;
@@ -111,8 +110,8 @@ template <class DataFacadeT> class ViaRoutePlugin final : public BasePlugin
         auto snapped_phantoms = snapPhantomNodes(phantom_node_pair_list);
 
         InternalRouteResult raw_route;
-        auto build_phantom_pairs = [&raw_route](const PhantomNode &first_node,
-                                                const PhantomNode &second_node)
+        auto build_phantom_pairs =
+            [&raw_route](const PhantomNode &first_node, const PhantomNode &second_node)
         {
             raw_route.segment_end_coordinates.push_back(PhantomNodes{first_node, second_node});
         };
@@ -166,7 +165,6 @@ template <class DataFacadeT> class ViaRoutePlugin final : public BasePlugin
                 return Status::Error;
             }
         }
-
         return Status::Ok;
     }
 };

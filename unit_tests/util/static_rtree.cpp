@@ -3,8 +3,11 @@
 #include "util/static_rtree.hpp"
 #include "extractor/query_node.hpp"
 #include "extractor/edge_based_node.hpp"
-#include "util/floating_point.hpp"
 #include "util/typedefs.hpp"
+#include "util/rectangle.hpp"
+#include "util/exception.hpp"
+
+#include "mocks/mock_datafacade.hpp"
 
 #include <boost/functional/hash.hpp>
 #include <boost/test/unit_test.hpp>
@@ -23,10 +26,12 @@
 #include <unordered_set>
 #include <vector>
 
+
 BOOST_AUTO_TEST_SUITE(static_rtree)
 
 using namespace osrm;
 using namespace osrm::util;
+using namespace osrm::test;
 
 constexpr uint32_t TEST_BRANCHING_FACTOR = 8;
 constexpr uint32_t TEST_LEAF_NODE_SIZE = 64;
@@ -307,15 +312,20 @@ BOOST_AUTO_TEST_CASE(regression_test)
     using Edge = std::pair<unsigned, unsigned>;
     GraphFixture fixture(
         {
-            Coord(40.0, 0.0), Coord(35.0, 5.0),
+         Coord(40.0, 0.0),
+         Coord(35.0, 5.0),
 
-            Coord(5.0, 5.0), Coord(0.0, 10.0),
+         Coord(5.0, 5.0),
+         Coord(0.0, 10.0),
 
-            Coord(20.0, 10.0), Coord(20.0, 5.0),
+         Coord(20.0, 10.0),
+         Coord(20.0, 5.0),
 
-            Coord(40.0, 100.0), Coord(35.0, 105.0),
+         Coord(40.0, 100.0),
+         Coord(35.0, 105.0),
 
-            Coord(5.0, 105.0), Coord(0.0, 110.0),
+         Coord(5.0, 105.0),
+         Coord(0.0, 110.0),
         },
         {Edge(0, 1), Edge(2, 3), Edge(4, 5), Edge(6, 7), Edge(8, 9)});
 
@@ -403,7 +413,7 @@ BOOST_AUTO_TEST_CASE(bearing_tests)
     using Edge = std::pair<unsigned, unsigned>;
     GraphFixture fixture(
         {
-            Coord(0.0, 0.0), Coord(10.0, 10.0),
+         Coord(0.0, 0.0), Coord(10.0, 10.0),
         },
         {Edge(0, 1), Edge(1, 0)});
 
@@ -411,7 +421,8 @@ BOOST_AUTO_TEST_CASE(bearing_tests)
     std::string nodes_path;
     build_rtree<GraphFixture, MiniStaticRTree>("test_bearing", &fixture, leaves_path, nodes_path);
     MiniStaticRTree rtree(nodes_path, leaves_path, fixture.coords);
-    engine::GeospatialQuery<MiniStaticRTree> query(rtree, fixture.coords);
+    std::unique_ptr<MockDataFacade> mockfacade_ptr(new MockDataFacade);
+    engine::GeospatialQuery<MiniStaticRTree, MockDataFacade> query(rtree, fixture.coords, *mockfacade_ptr);
 
     FixedPointCoordinate input(5.0 * COORDINATE_PRECISION, 5.1 * COORDINATE_PRECISION);
 
@@ -453,6 +464,43 @@ BOOST_AUTO_TEST_CASE(bearing_tests)
         BOOST_CHECK_EQUAL(results[0].phantom_node.reverse_node_id, SPECIAL_NODEID);
         BOOST_CHECK_EQUAL(results[1].phantom_node.forward_node_id, SPECIAL_NODEID);
         BOOST_CHECK_EQUAL(results[1].phantom_node.reverse_node_id, 1);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(bbox_search_tests)
+{
+    using Coord = std::pair<double, double>;
+    using Edge = std::pair<unsigned, unsigned>;
+
+    GraphFixture fixture(
+        {
+         Coord(0.0, 0.0), Coord(1.0, 1.0), Coord(2.0, 2.0), Coord(3.0, 3.0), Coord(4.0, 4.0),
+        },
+        {Edge(0, 1), Edge(1, 2), Edge(2, 3), Edge(3, 4)});
+
+    std::string leaves_path;
+    std::string nodes_path;
+    build_rtree<GraphFixture, MiniStaticRTree>("test_bbox", &fixture, leaves_path, nodes_path);
+    MiniStaticRTree rtree(nodes_path, leaves_path, fixture.coords);
+    std::unique_ptr<MockDataFacade> mockfacade_ptr(new MockDataFacade);
+    engine::GeospatialQuery<MiniStaticRTree, MockDataFacade> query(rtree, fixture.coords, *mockfacade_ptr);
+
+    {
+        RectangleInt2D bbox = {static_cast<uint32_t>(0.5 * COORDINATE_PRECISION),
+                               static_cast<uint32_t>(1.5 * COORDINATE_PRECISION),
+                               static_cast<uint32_t>(0.5 * COORDINATE_PRECISION),
+                               static_cast<uint32_t>(1.5 * COORDINATE_PRECISION)};
+        auto results = query.Search(bbox);
+        BOOST_CHECK_EQUAL(results.size(), 2);
+    }
+
+    {
+        RectangleInt2D bbox = {static_cast<uint32_t>(1.5 * COORDINATE_PRECISION),
+                               static_cast<uint32_t>(3.5 * COORDINATE_PRECISION),
+                               static_cast<uint32_t>(1.5 * COORDINATE_PRECISION),
+                               static_cast<uint32_t>(3.5 * COORDINATE_PRECISION)};
+        auto results = query.Search(bbox);
+        BOOST_CHECK_EQUAL(results.size(), 3);
     }
 }
 

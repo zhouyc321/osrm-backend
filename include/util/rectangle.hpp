@@ -8,8 +8,10 @@
 #include "osrm/coordinate.hpp"
 
 #include <algorithm>
-#include <cstdint>
+#include <utility>
 #include <limits>
+
+#include <cstdint>
 
 namespace osrm
 {
@@ -20,14 +22,23 @@ namespace util
 struct RectangleInt2D
 {
     RectangleInt2D()
-        : min_lon(std::numeric_limits<int32_t>::max()),
-          max_lon(std::numeric_limits<int32_t>::min()),
-          min_lat(std::numeric_limits<int32_t>::max()), max_lat(std::numeric_limits<int32_t>::min())
+        : min_lon(std::numeric_limits<std::int32_t>::max()),
+          max_lon(std::numeric_limits<std::int32_t>::min()),
+          min_lat(std::numeric_limits<std::int32_t>::max()),
+          max_lat(std::numeric_limits<std::int32_t>::min())
     {
     }
 
-    int32_t min_lon, max_lon;
-    int32_t min_lat, max_lat;
+    RectangleInt2D(std::int32_t min_lon_,
+                   std::int32_t max_lon_,
+                   std::int32_t min_lat_,
+                   std::int32_t max_lat_)
+        : min_lon(min_lon_), max_lon(max_lon_), min_lat(min_lat_), max_lat(max_lat_)
+    {
+    }
+
+    std::int32_t min_lon, max_lon;
+    std::int32_t min_lat, max_lat;
 
     void MergeBoundingBoxes(const RectangleInt2D &other)
     {
@@ -35,10 +46,10 @@ struct RectangleInt2D
         max_lon = std::max(max_lon, other.max_lon);
         min_lat = std::min(min_lat, other.min_lat);
         max_lat = std::max(max_lat, other.max_lat);
-        BOOST_ASSERT(min_lat != std::numeric_limits<int32_t>::min());
-        BOOST_ASSERT(min_lon != std::numeric_limits<int32_t>::min());
-        BOOST_ASSERT(max_lat != std::numeric_limits<int32_t>::min());
-        BOOST_ASSERT(max_lon != std::numeric_limits<int32_t>::min());
+        BOOST_ASSERT(min_lat != std::numeric_limits<std::int32_t>::min());
+        BOOST_ASSERT(min_lon != std::numeric_limits<std::int32_t>::min());
+        BOOST_ASSERT(max_lat != std::numeric_limits<std::int32_t>::min());
+        BOOST_ASSERT(max_lon != std::numeric_limits<std::int32_t>::min());
     }
 
     FixedPointCoordinate Centroid() const
@@ -53,13 +64,10 @@ struct RectangleInt2D
 
     bool Intersects(const RectangleInt2D &other) const
     {
-        FixedPointCoordinate upper_left(other.max_lat, other.min_lon);
-        FixedPointCoordinate upper_right(other.max_lat, other.max_lon);
-        FixedPointCoordinate lower_right(other.min_lat, other.max_lon);
-        FixedPointCoordinate lower_left(other.min_lat, other.min_lon);
-
-        return (Contains(upper_left) || Contains(upper_right) || Contains(lower_right) ||
-                Contains(lower_left));
+        // Standard box intersection test - check if boxes *don't* overlap,
+        // and return the negative of that
+        return !(max_lon < other.min_lon || min_lon > other.max_lon || max_lat < other.min_lat ||
+                 min_lat > other.max_lat);
     }
 
     double GetMinDist(const FixedPointCoordinate location) const

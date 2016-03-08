@@ -46,7 +46,7 @@ template <class DataFacadeT> class MapMatchingPlugin : public BasePlugin
     MapMatchingPlugin(DataFacadeT *facade, const int max_locations_map_matching)
         : descriptor_string("match"), facade(facade),
           max_locations_map_matching(max_locations_map_matching),
-          // the values where derived from fitting a laplace distribution
+          // the values were derived from fitting a laplace distribution
           // to the values of manually classified traces
           classifier(map_matching::LaplaceDistribution(0.005986, 0.016646),
                      map_matching::LaplaceDistribution(0.054385, 0.458432),
@@ -260,7 +260,7 @@ template <class DataFacadeT> class MapMatchingPlugin : public BasePlugin
         if (max_locations_map_matching > 0 &&
             static_cast<int>(route_parameters.coordinates.size()) > max_locations_map_matching)
         {
-            json_result.values["status_message"] = "Too many coodindates";
+            json_result.values["status_message"] = "Too many coordinates";
             return Status::Error;
         }
 

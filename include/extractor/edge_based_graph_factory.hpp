@@ -16,6 +16,8 @@
 #include "extractor/restriction_map.hpp"
 
 #include <algorithm>
+#include <cstdint>
+#include <cstddef>
 #include <iosfwd>
 #include <memory>
 #include <queue>
@@ -23,6 +25,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <string>
 
 #include <boost/filesystem/fstream.hpp>
 
@@ -47,20 +50,11 @@ class EdgeBasedGraphFactory
                                    const std::vector<QueryNode> &node_info_list,
                                    SpeedProfileProperties speed_profile);
 
-#ifdef DEBUG_GEOMETRY
-    void Run(const std::string &original_edge_data_filename,
-             lua_State *lua_state,
-             const std::string &edge_segment_lookup_filename,
-             const std::string &edge_penalty_filename,
-             const bool generate_edge_lookup,
-             const std::string &debug_turns_path);
-#else
     void Run(const std::string &original_edge_data_filename,
              lua_State *lua_state,
              const std::string &edge_segment_lookup_filename,
              const std::string &edge_penalty_filename,
              const bool generate_edge_lookup);
-#endif
 
     // The following get access functions destroy the content in the factory
     void GetEdgeBasedEdges(util::DeallocatingVector<EdgeBasedEdge> &edges);
@@ -70,10 +64,18 @@ class EdgeBasedGraphFactory
 
     unsigned GetHighestEdgeID();
 
-    TurnInstruction
-    AnalyzeTurn(const NodeID u, const NodeID v, const NodeID w, const double angle) const;
+    // Basic analysis of a turn (u --(e1)-- v --(e2)-- w)
+    // with known angle.
+    // Handles special cases like u-turns and roundabouts
+    // For basic turns, the turn based on the angle-classification is returned
+    TurnInstruction AnalyzeTurn(const NodeID u,
+                                const EdgeID e1,
+                                const NodeID v,
+                                const EdgeID e2,
+                                const NodeID w,
+                                const double angle) const;
 
-    int GetTurnPenalty(double angle, lua_State *lua_state) const;
+    std::int32_t GetTurnPenalty(double angle, lua_State *lua_state) const;
 
   private:
     using EdgeData = util::NodeBasedDynamicGraph::EdgeData;
@@ -123,8 +125,54 @@ class EdgeBasedGraphFactory
 
     void FlushVectorToStream(std::ofstream &edge_data_file,
                              std::vector<OriginalEdgeData> &original_edge_data_vector) const;
+
+    struct TurnCandidate
+    {
+        EdgeID eid; // the id of the arc
+        bool valid; // a turn may be relevant to good instructions, even if we cannot take the road
+        double angle;                // the approximated angle of the turn
+        TurnInstruction instruction; // a proposed instruction
+        double confidence;           // how close to the border is the turn?
+
+        std::string toString() const
+        {
+            std::string result = "[turn] ";
+            result += std::to_string(eid);
+            result += " valid: ";
+            result += std::to_string(valid);
+            result += " angle: ";
+            result += std::to_string(angle);
+            result += " instruction: ";
+            result += std::to_string(static_cast<std::int32_t>(instruction));
+            result += " confidence: ";
+            result += std::to_string(confidence);
+            return result;
+        }
+    };
+
+    // Use In Order to generate base turns
+
+    // cannot be const due to the counters...
+    std::vector<TurnCandidate> getTurnCandidates(NodeID from, EdgeID via_edge);
+    std::vector<TurnCandidate> optimizeCandidates(NodeID via_edge,
+                                                  std::vector<TurnCandidate> turn_candidates) const;
+    std::vector<TurnCandidate> suppressTurns(EdgeID via_edge,
+                                             std::vector<TurnCandidate> turn_candidates) const;
+
+    QueryNode getRepresentativeCoordinate(const NodeID src,
+                                          const NodeID tgt,
+                                          const EdgeID via_eid,
+                                          bool INVERTED) const;
+
+    bool isObviousChoice(EdgeID coming_from_eid,
+                         std::size_t turn_index,
+                         const std::vector<TurnCandidate> &turn_candidates) const;
+
+    std::size_t restricted_turns_counter;
+    std::size_t skipped_uturns_counter;
+    std::size_t skipped_barrier_turns_counter;
 };
-}
-}
+} // namespace extractor
+} // namespace osrm
 
 #endif /* EDGE_BASED_GRAPH_FACTORY_HPP_ */

@@ -114,9 +114,8 @@ void RouteParameters::SetCompressionFlag(const bool flag) { compression = flag; 
 
 void RouteParameters::AddCoordinate(const double latitude, const double longitude)
 {
-    coordinates.emplace_back(
-        static_cast<int>(COORDINATE_PRECISION * latitude),
-        static_cast<int>(COORDINATE_PRECISION * longitude));
+    coordinates.emplace_back(static_cast<int>(COORDINATE_PRECISION * latitude),
+                             static_cast<int>(COORDINATE_PRECISION * longitude));
     is_source.push_back(true);
     is_destination.push_back(true);
     uturns.push_back(uturn_default);
@@ -124,9 +123,8 @@ void RouteParameters::AddCoordinate(const double latitude, const double longitud
 
 void RouteParameters::AddDestination(const double latitude, const double longitude)
 {
-    coordinates.emplace_back(
-        static_cast<int>(COORDINATE_PRECISION * latitude),
-        static_cast<int>(COORDINATE_PRECISION * longitude));
+    coordinates.emplace_back(static_cast<int>(COORDINATE_PRECISION * latitude),
+                             static_cast<int>(COORDINATE_PRECISION * longitude));
     is_source.push_back(false);
     is_destination.push_back(true);
     uturns.push_back(uturn_default);
@@ -134,9 +132,8 @@ void RouteParameters::AddDestination(const double latitude, const double longitu
 
 void RouteParameters::AddSource(const double latitude, const double longitude)
 {
-    coordinates.emplace_back(
-        static_cast<int>(COORDINATE_PRECISION * latitude),
-        static_cast<int>(COORDINATE_PRECISION * longitude));
+    coordinates.emplace_back(static_cast<int>(COORDINATE_PRECISION * latitude),
+                             static_cast<int>(COORDINATE_PRECISION * longitude));
     is_source.push_back(true);
     is_destination.push_back(false);
     uturns.push_back(uturn_default);
@@ -145,6 +142,27 @@ void RouteParameters::AddSource(const double latitude, const double longitude)
 void RouteParameters::SetCoordinatesFromGeometry(const std::string &geometry_string)
 {
     coordinates = polylineDecode(geometry_string);
+}
+
+bool RouteParameters::SetX(const int x_)
+{
+    x = x_;
+    return true;
+}
+bool RouteParameters::SetZ(const int z_)
+{
+    if (z_ < 12)
+    {
+        return false;
+    }
+
+    z = z_;
+    return true;
+}
+bool RouteParameters::SetY(const int y_)
+{
+    y = y_;
+    return true;
 }
 }
 }

@@ -25,6 +25,22 @@ Feature: Testbot - Travel mode
         When I route I should get
             | from | to | route        | modes |
             | a    | d  | foo,foo,foo  | 1,3,1 |
+            | b    | d  | foo,foo      | 3,1   |
+
+    Scenario: Testbot - Compressed Modes
+        Given the node map
+            | a | b | c | d | e | f | g |
+
+        And the ways
+            | nodes | highway     | name   |
+            | abc   | residential | road   |
+            | cde   | river       | liquid |
+            | efg   | residential | solid  |
+
+        When I route I should get
+            | from | to | route              | modes | turns                              |
+            | a    | g  | road,liquid,solid  | 1,3,1 | head,straight,straight,destination |
+            | c    | g  | liquid,solid       | 3,1   | head,straight,destination          |
 
     Scenario: Testbot - Modes in each direction, different forward/backward speeds
         Given the node map
@@ -174,14 +190,14 @@ Feature: Testbot - Travel mode
             | ef    | primary |       |          |
 
        When I route I should get
-            | from | to | route          | turns                                         | modes     |
-            | a    | d  | ab,bc,cd       | head,right,left,destination                   | 1,2,1     |
-            | d    | a  | cd,bc,ab       | head,right,left,destination                   | 1,2,1     |
-            | c    | a  | bc,ab          | head,left,destination                         | 2,1       |
-            | d    | b  | cd,bc          | head,right,destination                        | 1,2       |
-            | a    | c  | ab,bc          | head,right,destination                        | 1,2       |
-            | b    | d  | bc,cd          | head,left,destination                         | 2,1       |
-            | a    | f  | ab,bc,cd,de,ef | head,right,left,straight,straight,destination | 1,2,1,1,1 |
+            | from | to | route          | turns                                                 | modes     |
+            | a    | d  | ab,bc,cd       | head,right,left,destination                           | 1,2,1     |
+            | d    | a  | cd,bc,ab       | head,right,left,destination                           | 1,2,1     |
+            | c    | a  | bc,ab          | head,left,destination                                 | 2,1       |
+            | d    | b  | cd,bc          | head,right,destination                                | 1,2       |
+            | a    | c  | ab,bc          | head,right,destination                                | 1,2       |
+            | b    | d  | bc,cd          | head,left,destination                                 | 2,1       |
+            | a    | f  | ab,bc,cd,de,ef | head,right,left,straight,straight,destination         | 1,2,1,1,1 |
 
     Scenario: Testbot - Modes, triangle map
         Given the node map
