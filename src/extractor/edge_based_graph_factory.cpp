@@ -360,7 +360,7 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
 
             const auto coordinate = util::Coordinate(m_node_info_list[node_v]);
             const auto in = guidance::getRepresentativeCoordinate(
-                node_v, node_u, edge_from_u, true, m_compressed_edge_container, m_node_info_list);
+                node_u, node_v, edge_from_u, true, m_compressed_edge_container, m_node_info_list,50);
             for (const auto &turn : possible_turns)
             {
                 std::pair<int, int> turn_id = std::make_pair(
@@ -368,7 +368,7 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                 auto &itr = turn_examples[turn_id];
                 const auto out = guidance::getRepresentativeCoordinate(
                     node_v, m_node_based_graph->GetTarget(turn.eid), turn.eid, false,
-                    m_compressed_edge_container, m_node_info_list);
+                    m_compressed_edge_container, m_node_info_list,50);
                 if (itr.size() < 4)
                     itr.push_back(getUrls(in, coordinate, out));
             }
