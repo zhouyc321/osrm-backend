@@ -21,6 +21,9 @@
 #include <limits>
 #include <sstream>
 #include <string>
+#include <utility>
+
+#include <map>
 
 namespace osrm
 {
@@ -322,6 +325,25 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
     util::Percent progress(m_node_based_graph->GetNumberOfNodes());
     guidance::TurnAnalysis turn_analysis(*m_node_based_graph, m_node_info_list, *m_restriction_map,
                                          m_barrier_nodes, m_compressed_edge_container, name_table);
+
+    std::map<std::pair<int, int>, std::vector<std::pair<std::string, std::string>>> turn_examples;
+    const auto getUrls = [](const util::Coordinate &in, const util::Coordinate &via,
+                            const util::Coordinate &out) {
+        std::string v4_url = "http://map.project-osrm.org/", v5_url = "0.0.0.0:8000/";
+        std::ostringstream oss;
+        // http://map.project-osrm.org/?z=17&center=43.327925%2C-5.728024&loc=43.329814%2C-5.724542&loc=43.326114%2C-5.731516&hl=en&alt=0
+        oss << std::setprecision(12) << "?z=17&center=" << util::toFloating(via.lat) << "%2C"
+            << util::toFloating(via.lon) << "&loc=" << util::toFloating(in.lat) << "%2C"
+            << util::toFloating(in.lon) << "&loc=" << util::toFloating(out.lat) << "%2C"
+            << util::toFloating(out.lon) << "&hl=en&alt=0";
+        v4_url += oss.str();
+        std::ostringstream oss2;
+        oss2 << std::setprecision(12) << "?loc=" << util::toFloating(in.lat) << "%2C"
+             << util::toFloating(in.lon) << "&loc=" << util::toFloating(out.lat) << "%2C"
+             << util::toFloating(out.lon) << "&hl=en&alt=0";
+        v5_url += oss2.str();
+        return std::make_pair(v4_url, v5_url);
+    };
     for (const auto node_u : util::irange(0u, m_node_based_graph->GetNumberOfNodes()))
     {
         progress.printStatus(node_u);
@@ -334,10 +356,23 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
 
             ++node_based_edge_counter;
             auto possible_turns = turn_analysis.getTurns(node_u, edge_from_u);
-
             const NodeID node_v = m_node_based_graph->GetTarget(edge_from_u);
 
-            for (const auto turn : possible_turns)
+            const auto coordinate = util::Coordinate(m_node_info_list[node_v]);
+            const auto in = guidance::getRepresentativeCoordinate(
+                node_v, node_u, edge_from_u, true, m_compressed_edge_container, m_node_info_list);
+            for (const auto &turn : possible_turns)
+            {
+                std::pair<int, int> turn_id = std::make_pair(
+                    (int)turn.instruction.type, (int)turn.instruction.direction_modifier);
+                auto &itr = turn_examples[turn_id];
+                const auto out = guidance::getRepresentativeCoordinate(
+                    node_v, m_node_based_graph->GetTarget(turn.eid), turn.eid, false,
+                    m_compressed_edge_container, m_node_info_list);
+                if (itr.size() < 4)
+                    itr.push_back(getUrls(in, coordinate, out));
+            }
+            for (const auto &turn : possible_turns)
             {
                 const double turn_angle = turn.angle;
 
@@ -434,6 +469,37 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                 }
             }
         }
+    }
+
+    const char *modifiers[] = {"UTurn",    "SharpRight", "Right", "SlightRight",
+                               "Straight", "SlightLeft", "Left",  "SharpLeft"};
+
+    const char *turns[] = {"Invalid",
+                           "NoTurn",
+                           "Suppressed",
+                           "NewName",
+                           "Continue",
+                           "Turn",
+                           "Merge",
+                           "Ramp",
+                           "Fork",
+                           "EndOfRoad",
+                           "EnterRoundabout",
+                           "EnterRoundaboutAtExit",
+                           "EnterAndExitRoundabout",
+                           "ExitRoundabout",
+                           "EnterRotary",
+                           "EnterRotaryAtExit",
+                           "EnterAndExitRotary",
+                           "ExitRotary",
+                           "StayOnRoundabout",
+                           "Notification"};
+    for (const auto &example : turn_examples)
+    {
+        std::cout << turns[example.first.first] << " " << modifiers[example.first.second];
+        for (auto coord : example.second)
+            std::cout << " " << coord.first << " " << coord.second;
+        std::cout << std::endl;
     }
 
     FlushVectorToStream(edge_data_file, original_edge_data_vector);
