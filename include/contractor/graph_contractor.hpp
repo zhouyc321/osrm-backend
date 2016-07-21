@@ -85,7 +85,7 @@ class GraphContractor
     {
         ContractorHeap heap;
         std::vector<ContractorEdge> inserted_edges;
-        std::vector<NodeID> neighbours;
+        std::vector<std::pair<float, NodeID>> neighbours;
         explicit ContractorThreadData(NodeID nodes) : heap(nodes) {}
     };
 
@@ -553,14 +553,7 @@ class GraphContractor
                              ++position)
                         {
                             NodeID x = remaining_nodes[position].id;
-#if 1
-                            const constexpr int frequency = 3;
-                            this->UpdateNodeNeighbours(
-                                node_priorities, node_depth, data, x, (current_level % frequency) == (frequency-1));
-#else
-                            this->UpdateNodeNeighbours(
-                                node_priorities, node_depth, data, x, false);
-#endif
+                            this->UpdateNodeNeighbours(node_priorities, node_depth, data, x);
                         }
                     });
             }
@@ -978,7 +971,7 @@ class GraphContractor
 
     inline void DeleteIncomingEdges(ContractorThreadData *data, const NodeID node)
     {
-        std::vector<NodeID> &neighbours = data->neighbours;
+        std::vector<std::pair<float, NodeID>> &neighbours = data->neighbours;
         neighbours.clear();
 
         // find all neighbours
@@ -987,7 +980,7 @@ class GraphContractor
             const NodeID u = contractor_graph->GetTarget(e);
             if (u != node)
             {
-                neighbours.push_back(u);
+                neighbours.push_back({0, u});
             }
         }
         // eliminate duplicate entries ( forward + backward edges )
@@ -996,17 +989,16 @@ class GraphContractor
 
         for (const auto i : util::irange<std::size_t>(0, neighbours.size()))
         {
-            contractor_graph->DeleteEdgesTo(neighbours[i], node);
+            contractor_graph->DeleteEdgesTo(neighbours[i].second, node);
         }
     }
 
     inline bool UpdateNodeNeighbours(std::vector<float> &priorities,
                                      std::vector<NodeDepth> &node_depth,
                                      ContractorThreadData *const data,
-                                     const NodeID node,
-                                     const bool lazy)
+                                     const NodeID node)
     {
-        std::vector<NodeID> &neighbours = data->neighbours;
+        std::vector<std::pair<float, NodeID>> &neighbours = data->neighbours;
         neighbours.clear();
 
         // find all neighbours
@@ -1017,7 +1009,8 @@ class GraphContractor
             {
                 continue;
             }
-            neighbours.push_back(u);
+
+            neighbours.push_back({priorities[u], u});
             node_depth[u] = std::max(node_depth[node] + 1, node_depth[u]);
         }
         // eliminate duplicate entries ( forward + backward edges )
@@ -1025,12 +1018,13 @@ class GraphContractor
         neighbours.resize(std::unique(neighbours.begin(), neighbours.end()) - neighbours.begin());
 
         // re-evaluate priorities of neighboring nodes
-        for (const NodeID u : neighbours)
+        for (std::size_t i = 0; i < neighbours.size(); ++i)
+        //        for (const NodeID u : neighbours)
         {
-            if (lazy && node_depth[u] == node_depth[node] + 1)
-                priorities[u] += 1;
-            else
-                priorities[u] = EvaluateNodePriority(data, node_depth[u], u);
+            const NodeID u = neighbours[i].second;
+            priorities[u] = EvaluateNodePriority(data, node_depth[u], u);
+            if (i + 1 < neighbours.size() && priorities[u] < neighbours[i + 1].first)
+                break;
         }
         return true;
     }
@@ -1041,7 +1035,7 @@ class GraphContractor
     {
         const float priority = priorities[node];
 
-        std::vector<NodeID> &neighbours = data->neighbours;
+        std::vector<std::pair<float, NodeID>> &neighbours = data->neighbours;
         neighbours.clear();
 
         for (auto e : contractor_graph->GetAdjacentEdgeRange(node))
@@ -1064,15 +1058,16 @@ class GraphContractor
             {
                 return false;
             }
-            neighbours.push_back(target);
+            neighbours.push_back({0, target});
         }
 
         std::sort(neighbours.begin(), neighbours.end());
         neighbours.resize(std::unique(neighbours.begin(), neighbours.end()) - neighbours.begin());
 
         // examine all neighbours that are at most 2 hops away
-        for (const NodeID u : neighbours)
+        for (const auto node_with_priority : neighbours)
         {
+            const NodeID u = node_with_priority.second;
             for (auto e : contractor_graph->GetAdjacentEdgeRange(u))
             {
                 const NodeID target = contractor_graph->GetTarget(e);
