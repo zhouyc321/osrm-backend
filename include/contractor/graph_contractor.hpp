@@ -441,7 +441,6 @@ class GraphContractor
                             this->IsNodeIndependent(node_priorities, data, node);
                     }
                 });
-
             // sort all remaining nodes to the beginning of the sequence
             const auto begin_independent_nodes = stable_partition(
                 remaining_nodes.begin(), remaining_nodes.end(), [](RemainingNodeData node_data) {
@@ -479,7 +478,6 @@ class GraphContractor
                         }
                     });
             }
-
             // contract independent nodes
             tbb::parallel_for(
                 tbb::blocked_range<std::size_t>(
@@ -494,7 +492,6 @@ class GraphContractor
                         this->ContractNode<false>(data, x);
                     }
                 });
-
             tbb::parallel_for(
                 tbb::blocked_range<int>(
                     begin_independent_nodes_idx, end_independent_nodes_idx, DeleteGrainSize),
@@ -507,7 +504,6 @@ class GraphContractor
                         this->DeleteIncomingEdges(data, x);
                     }
                 });
-
             // make sure we really sort each block
             tbb::parallel_for(
                 thread_data_list.data.range(),
@@ -516,7 +512,6 @@ class GraphContractor
                         tbb::parallel_sort(data->inserted_edges.begin(),
                                            data->inserted_edges.end());
                 });
-
             // insert new edges
             for (auto &data : thread_data_list.data)
             {
@@ -541,21 +536,31 @@ class GraphContractor
                 }
                 data->inserted_edges.clear();
             }
-
             if (!use_cached_node_priorities)
             {
                 tbb::parallel_for(
                     tbb::blocked_range<int>(begin_independent_nodes_idx,
                                             end_independent_nodes_idx,
                                             NeighboursGrainSize),
-                    [this, &node_priorities, &remaining_nodes, &node_depth, &thread_data_list](
-                        const tbb::blocked_range<int> &range) {
+                    [this,
+                     &node_priorities,
+                     &remaining_nodes,
+                     &node_depth,
+                     &thread_data_list,
+                     current_level](const tbb::blocked_range<int> &range) {
                         ContractorThreadData *data = thread_data_list.GetThreadData();
                         for (int position = range.begin(), end = range.end(); position != end;
                              ++position)
                         {
                             NodeID x = remaining_nodes[position].id;
-                            this->UpdateNodeNeighbours(node_priorities, node_depth, data, x);
+#if 1
+                            const constexpr int frequency = 3;
+                            this->UpdateNodeNeighbours(
+                                node_priorities, node_depth, data, x, (current_level % frequency) == (frequency-1));
+#else
+                            this->UpdateNodeNeighbours(
+                                node_priorities, node_depth, data, x, false);
+#endif
                         }
                     });
             }
@@ -998,7 +1003,8 @@ class GraphContractor
     inline bool UpdateNodeNeighbours(std::vector<float> &priorities,
                                      std::vector<NodeDepth> &node_depth,
                                      ContractorThreadData *const data,
-                                     const NodeID node)
+                                     const NodeID node,
+                                     const bool lazy)
     {
         std::vector<NodeID> &neighbours = data->neighbours;
         neighbours.clear();
@@ -1021,7 +1027,10 @@ class GraphContractor
         // re-evaluate priorities of neighboring nodes
         for (const NodeID u : neighbours)
         {
-            priorities[u] = EvaluateNodePriority(data, node_depth[u], u);
+            if (lazy && node_depth[u] == node_depth[node] + 1)
+                priorities[u] += 1;
+            else
+                priorities[u] = EvaluateNodePriority(data, node_depth[u], u);
         }
         return true;
     }
