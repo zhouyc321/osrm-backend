@@ -1,11 +1,13 @@
 #include "extractor/guidance/turn_lane_augmentation.hpp"
 #include "extractor/guidance/turn_lane_types.hpp"
 #include "util/simple_logger.hpp"
+#include "util/debug.hpp"
 
 #include <algorithm>
 #include <boost/assert.hpp>
 #include <cstddef>
 #include <utility>
+#include <iostream>
 
 namespace osrm
 {
@@ -283,7 +285,10 @@ LaneDataVector handleNoneValueAtSimpleTurn(LaneDataVector lane_data,
         // a pgerequisite is simple turns. Larger differences should not end up here
         // an additional line at the side is only reasonable if it is targeting public
         // service vehicles. Otherwise, we should not have it
-        BOOST_ASSERT(connection_count + 1 == lane_data.size());
+        if (connection_count + 1 != lane_data.size()) {
+          std::cout << ">>> " << connection_count << ", " << lane_data.size() << std::endl;
+          util::guidance::print(lane_data);
+        }
 
         lane_data = mergeNoneTag(none_index, std::move(lane_data));
     }
