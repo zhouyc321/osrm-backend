@@ -131,7 +131,7 @@ Intersection TurnLaneHandler::assignTurnLanes(const NodeID at,
     // simple intersections can be assigned directly
     if (is_simple)
     {
-        lane_data = handleNoneValueAtSimpleTurn(std::move(lane_data), intersection);
+        lane_data = handleNoneValueAtSimpleTurn(std::move(lane_data), intersection, node_info_list, node_based_graph);
         return simpleMatchTuplesToTurns(
             std::move(intersection), lane_data, data.lane_description_id, id_map);
     }
@@ -152,7 +152,7 @@ Intersection TurnLaneHandler::assignTurnLanes(const NodeID at,
             if (lane_data.size() == possible_entries &&
                 isSimpleIntersection(lane_data, intersection))
             {
-                lane_data = handleNoneValueAtSimpleTurn(std::move(lane_data), intersection);
+                lane_data = handleNoneValueAtSimpleTurn(std::move(lane_data), intersection, node_info_list, node_based_graph);
                 return simpleMatchTuplesToTurns(
                     std::move(intersection), lane_data, data.lane_description_id, id_map);
             }
@@ -233,7 +233,7 @@ Intersection TurnLaneHandler::handleTurnAtPreviousIntersection(const NodeID at,
     const auto is_simple = isSimpleIntersection(lane_data, intersection);
     if (is_simple)
     {
-        lane_data = handleNoneValueAtSimpleTurn(std::move(lane_data), intersection);
+        lane_data = handleNoneValueAtSimpleTurn(std::move(lane_data), intersection, node_info_list, node_based_graph);
         return simpleMatchTuplesToTurns(
             std::move(intersection), lane_data, previous_data.lane_description_id, id_map);
     }
@@ -253,7 +253,7 @@ Intersection TurnLaneHandler::handleTurnAtPreviousIntersection(const NodeID at,
             if (lane_data.size() == getNumberOfTurns(intersection) &&
                 isSimpleIntersection(lane_data, intersection))
             {
-                lane_data = handleNoneValueAtSimpleTurn(std::move(lane_data), intersection);
+                lane_data = handleNoneValueAtSimpleTurn(std::move(lane_data), intersection, node_info_list, node_based_graph);
                 return simpleMatchTuplesToTurns(
                     std::move(intersection), lane_data, previous_data.lane_description_id, id_map);
             }

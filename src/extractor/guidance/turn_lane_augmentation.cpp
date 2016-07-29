@@ -1,13 +1,14 @@
 #include "extractor/guidance/turn_lane_augmentation.hpp"
 #include "extractor/guidance/turn_lane_types.hpp"
-#include "util/simple_logger.hpp"
+#include "util/coordinate.hpp"
 #include "util/debug.hpp"
+#include "util/simple_logger.hpp"
 
 #include <algorithm>
 #include <boost/assert.hpp>
 #include <cstddef>
-#include <utility>
 #include <iostream>
+#include <utility>
 
 namespace osrm
 {
@@ -42,7 +43,6 @@ LaneDataVector augmentMultiple(const std::size_t none_index,
                                LaneDataVector lane_data,
                                const Intersection &intersection)
 {
-
     // a none-turn is allowing multiple turns. we have to add a lane-data entry for
     // every possible turn. This should, hopefully, only be the case for single lane
     // entries?
@@ -235,8 +235,25 @@ LaneDataVector handleRenamingSituations(const std::size_t none_index,
    intersection and the lane data to see what turns we have to augment by the none-lanes
  */
 LaneDataVector handleNoneValueAtSimpleTurn(LaneDataVector lane_data,
-                                           const Intersection &intersection)
+                                           const Intersection &intersection,
+                                           const std::vector<QueryNode> &node_info_list,
+                                           const util::NodeBasedDynamicGraph &node_based_graph)
 {
+    const auto get_coordinate = [&](const NodeID node) {
+        return util::Coordinate(node_info_list[node].lon, node_info_list[node].lat);
+    };
+
+    const auto print_location = [&](const Intersection &is) {
+        std::cout << ">>> Broken Intersection: \n";
+        for (const auto road : is)
+        {
+            auto edge = road.turn.eid;
+            auto node = node_based_graph.GetTarget(edge);
+            auto coor = get_coordinate(node);
+            std::cout << coor << std::endl;
+        }
+    };
+
     const bool needs_no_processing =
         (intersection.empty() || lane_data.empty() || !hasTag(TurnLaneType::none, lane_data));
 
@@ -285,9 +302,11 @@ LaneDataVector handleNoneValueAtSimpleTurn(LaneDataVector lane_data,
         // a pgerequisite is simple turns. Larger differences should not end up here
         // an additional line at the side is only reasonable if it is targeting public
         // service vehicles. Otherwise, we should not have it
-        if (connection_count + 1 != lane_data.size()) {
-          std::cout << ">>> " << connection_count << ", " << lane_data.size() << std::endl;
-          util::guidance::print(lane_data);
+        if (connection_count + 1 != lane_data.size())
+        {
+            std::cout << ">>> " << connection_count << ", " << lane_data.size() << std::endl;
+            util::guidance::print(lane_data);
+            print_location(intersection);
         }
 
         lane_data = mergeNoneTag(none_index, std::move(lane_data));
