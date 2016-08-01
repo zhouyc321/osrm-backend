@@ -251,6 +251,7 @@ LaneDataVector handleNoneValueAtSimpleTurn(LaneDataVector lane_data,
             auto node = node_based_graph.GetTarget(edge);
             auto coor = get_coordinate(node);
             std::cout << coor << std::endl;
+            util::guidance::printTurnAssignmentData(node, lane_data, intersection, node_info_list);
         }
     };
 
