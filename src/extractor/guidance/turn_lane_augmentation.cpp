@@ -308,6 +308,7 @@ LaneDataVector handleNoneValueAtSimpleTurn(LaneDataVector lane_data,
             std::cout << ">>> " << connection_count << ", " << lane_data.size() << std::endl;
             util::guidance::print(lane_data);
             print_location(intersection);
+            goto these_intersections_are_clearly_broken_at_the_moment;
         }
 
         lane_data = mergeNoneTag(none_index, std::move(lane_data));
@@ -318,6 +319,7 @@ LaneDataVector handleNoneValueAtSimpleTurn(LaneDataVector lane_data,
     {
         lane_data = handleRenamingSituations(none_index, std::move(lane_data), intersection);
     }
+these_intersections_are_clearly_broken_at_the_moment:
     // finally make sure we are still sorted
     std::sort(lane_data.begin(), lane_data.end());
     return lane_data;
