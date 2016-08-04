@@ -127,7 +127,7 @@ Intersection TurnLaneHandler::assignTurnLanes(const NodeID at,
         intersection[0].entry_allowed && !hasTag(TurnLaneType::none, lane_data))
         lane_data.push_back({TurnLaneType::uturn, lane_data.back().to, lane_data.back().to});
 
-    bool is_simple = isSimpleIntersection(lane_data, intersection);
+    bool is_simple = isSimpleIntersection(lane_data, intersection, at);
     // simple intersections can be assigned directly
     if (is_simple)
     {
@@ -150,7 +150,7 @@ Intersection TurnLaneHandler::assignTurnLanes(const NodeID at,
 
             // check if we were successfull in trimming
             if (lane_data.size() == possible_entries &&
-                isSimpleIntersection(lane_data, intersection))
+                isSimpleIntersection(lane_data, intersection, at))
             {
                 lane_data = handleNoneValueAtSimpleTurn(std::move(lane_data), intersection, node_info_list, node_based_graph);
                 return simpleMatchTuplesToTurns(
@@ -215,7 +215,7 @@ Intersection TurnLaneHandler::handleTurnAtPreviousIntersection(const NodeID at,
 
         lane_data = laneDataFromDescription(previous_description);
 
-        if (isSimpleIntersection(lane_data, previous_intersection))
+        if (isSimpleIntersection(lane_data, previous_intersection, at))
             return {};
         else
             return previous_description;
@@ -230,7 +230,7 @@ Intersection TurnLaneHandler::handleTurnAtPreviousIntersection(const NodeID at,
         return intersection;
 
     const auto &previous_data = node_based_graph.GetEdgeData(previous_id);
-    const auto is_simple = isSimpleIntersection(lane_data, intersection);
+    const auto is_simple = isSimpleIntersection(lane_data, intersection, at);
     if (is_simple)
     {
         lane_data = handleNoneValueAtSimpleTurn(std::move(lane_data), intersection, node_info_list, node_based_graph);
@@ -251,7 +251,7 @@ Intersection TurnLaneHandler::handleTurnAtPreviousIntersection(const NodeID at,
 
             // check if we were successfull in trimming
             if (lane_data.size() == getNumberOfTurns(intersection) &&
-                isSimpleIntersection(lane_data, intersection))
+                isSimpleIntersection(lane_data, intersection, at))
             {
                 lane_data = handleNoneValueAtSimpleTurn(std::move(lane_data), intersection, node_info_list, node_based_graph);
                 return simpleMatchTuplesToTurns(
@@ -270,7 +270,8 @@ Intersection TurnLaneHandler::handleTurnAtPreviousIntersection(const NodeID at,
  * followin the turn, offers no straight turn, or only non-trivial turn operations.
  */
 bool TurnLaneHandler::isSimpleIntersection(const LaneDataVector &lane_data,
-                                           const Intersection &intersection) const
+                                           const Intersection &intersection,
+                                           const NodeID at) const
 {
     if (lane_data.empty())
         return false;
@@ -295,7 +296,11 @@ bool TurnLaneHandler::isSimpleIntersection(const LaneDataVector &lane_data,
     // to be for another intersection. A single additional item can be for an invalid bus lane.
     const auto num_turns = [&]() {
         auto count = getNumberOfTurns(intersection);
+
         if (count < lane_data.size() && !intersection[0].entry_allowed &&
+            // Only add a lane if this is actually a bidirectional road
+            (node_based_graph.GetTarget(intersection[0].turn.eid) == at &&
+             !node_based_graph.GetEdgeData(intersection[0].turn.eid).reversed) &&
             lane_data.back().tag == TurnLaneType::uturn)
             return count + 1;
         return count;

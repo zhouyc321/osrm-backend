@@ -57,7 +57,8 @@ class TurnLaneHandler
 
     // check whether we can handle an intersection
     bool isSimpleIntersection(const LaneDataVector &turn_lane_data,
-                              const Intersection &intersection) const;
+                              const Intersection &intersection,
+                              const NodeID at) const;
 
     // in case of a simple intersection, assign the lane entries
     Intersection simpleMatchTuplesToTurns(Intersection intersection,
