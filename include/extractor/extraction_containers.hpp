@@ -68,6 +68,7 @@ class ExtractionContainers
     unsigned max_internal_node_id;
 
     ExtractionContainers();
+    ~ExtractionContainers();
 
     void PrepareData(ScriptingEnvironment &scripting_environment,
                      const std::string &output_file_name,

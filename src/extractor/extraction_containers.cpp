@@ -123,6 +123,37 @@ ExtractionContainers::ExtractionContainers()
     turn_lane_offsets.push_back(0);
 }
 
+ExtractionContainers::~ExtractionContainers()
+{
+
+    // We have to iterate over each STXXL variable separately
+    // and add up their sizes to get total STXXL usage.
+    // There's no way to do this dynamically, so instead, we
+    // hard-code the class size here.
+    //
+    // If you're getting an assertion failure here, it means you've
+    // modified ExtractionContainers and either added or remove
+    // some class members.
+    //
+    // If any of those class members were STXXL variables, update
+    // the equation below.
+    //
+    // Once done, update the size being compared here.
+    static_assert(sizeof(ExtractionContainers) == 2352, "ExtractionContainers size has changed, please update destructor configuration");
+
+    const auto total_stxxl_memory =
+        turn_lane_offsets.raw_capacity() +
+        used_node_id_list.raw_capacity() +
+        all_nodes_list.raw_capacity() +
+        all_edges_list.raw_capacity() +
+        name_char_data.raw_capacity() +
+        name_offsets.raw_capacity() +
+        restrictions_list.raw_capacity() +
+        way_start_end_id_list.raw_capacity();
+
+    util::SimpleLogger().Write() << "STXXL Used " << total_stxxl_memory << " bytes";
+}
+
 /**
  * Processes the collected data and serializes it.
  * At this point nodes are still referenced by their OSM id.
