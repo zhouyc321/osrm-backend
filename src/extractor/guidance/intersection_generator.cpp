@@ -1,7 +1,7 @@
 #include <iomanip> // TODO REMOVE
 
-#include "extractor/guidance/intersection_generator.hpp"
 #include "extractor/guidance/constants.hpp"
+#include "extractor/guidance/intersection_generator.hpp"
 #include "extractor/guidance/toolkit.hpp"
 
 #include <algorithm>
@@ -99,8 +99,20 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
 
         auto angle = 0.;
         double bearing = 0.;
+
+        // The first coordinate (the origin) can depend on the number of lanes turning onto,
+        // just as the target coordinate can. Here we compute the corrected coordinate for the
+        // incoming edge.
+        const auto first_coordinate = coordinate_extractor.GetCoordinateAlongRoad(
+            from_node,
+            via_eid,
+            INVERT,
+            turn_node,
+            node_based_graph.GetEdgeData(onto_edge).road_classification.GetNumberOfLanes());
+
         if (from_node == to_node)
         {
+            bearing = util::coordinate_calculation::bearing(turn_coordinate, first_coordinate);
             uturn_could_be_valid = turn_is_valid;
             if (turn_is_valid && !is_barrier_node)
             {
@@ -130,16 +142,6 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
             // the default distance we lookahead on a road. This distance prevents small mapping
             // errors to impact the turn angles.
             const constexpr double LOOKAHEAD_DISTANCE_WITHOUT_LANES = 10.0;
-
-            // The first coordinate (the origin) can depend on the number of lanes turning onto,
-            // just as the target coordinate can. Here we compute the corrected coordinate for the
-            // incoming edge.
-            const auto first_coordinate = coordinate_extractor.GetCoordinateAlongRoad(
-                from_node,
-                via_eid,
-                INVERT,
-                turn_node,
-                node_based_graph.GetEdgeData(onto_edge).road_classification.GetNumberOfLanes());
 
             const auto third_coordinate = coordinate_extractor.GetCoordinateAlongRoad(
                 turn_node,
@@ -420,15 +422,34 @@ Intersection IntersectionGenerator::MergeSegregatedRoads(const NodeID intersecti
         return (index + intersection.size() - 1) % intersection.size();
     };
 
-    const auto merge = [](const ConnectedRoad &first,
+    // we only merge small angles. If the difference between both is large, we are looking at a
+    // bearing leading north. Such a bearing cannot be handled via the basic average. In this
+    // case we actually need to shift the bearing by half the difference.
+    const auto aroundZero = [](const double first, const double second) {
+        return (std::max(first, second) - std::min(first, second)) >= 180;
+    };
+
+    // find the angle between two other angles
+    const auto combineAngles = [aroundZero](const double first, const double second) {
+        if (!aroundZero(first, second))
+            return .5 * (first + second);
+        else
+        {
+            const auto offset = angularDeviation(first, second);
+            auto new_angle = std::max(first, second) + .5 * offset;
+            if (new_angle > 360)
+                return new_angle - 360;
+            return new_angle;
+        }
+    };
+
+    const auto merge = [combineAngles](const ConnectedRoad &first,
                           const ConnectedRoad &second) -> ConnectedRoad {
         ConnectedRoad result = first.entry_allowed ? first : second;
-        result.turn.angle = (first.turn.angle + second.turn.angle) / 2;
-        result.turn.bearing = (first.turn.bearing + second.turn.bearing) / 2;
-        if (first.turn.angle - second.turn.angle > 180)
-            result.turn.angle += 180;
-        if (result.turn.angle > 360)
-            result.turn.angle -= 360;
+        result.turn.angle = combineAngles(first.turn.angle, second.turn.angle);
+        result.turn.bearing = combineAngles(first.turn.bearing, second.turn.bearing);
+        BOOST_ASSERT(0 <= result.turn.angle && result.turn.angle <= 360.0);
+        BOOST_ASSERT(0 <= result.turn.bearing && result.turn.bearing <= 360.0);
         return result;
     };
 
@@ -571,14 +592,6 @@ Intersection IntersectionGenerator::AdjustForJoiningRoads(const NodeID node_at_i
     for (std::size_t index = 1; index < intersection.size(); ++index)
     {
         auto &road = intersection[index];
-        // to find out about the above situation, we need to look at the next intersection (at d in
-        // the example). If the initial road can be merged to the left/right, we are about to adjust
-        // the angle.
-        const auto next_intersection_along_road =
-            GetConnectedRoads(node_at_intersection, road.turn.eid);
-        if (next_intersection_along_road.size() <= 1)
-            continue;
-
         const auto node_at_next_intersection = node_based_graph.GetTarget(road.turn.eid);
         const util::Coordinate coordinate_at_next_intersection =
             node_info_list[node_at_next_intersection];
@@ -594,6 +607,16 @@ Intersection IntersectionGenerator::AdjustForJoiningRoads(const NodeID node_at_i
                 return angle + 360.;
             return angle;
         };
+
+        const auto range = node_based_graph.GetAdjacentEdgeRange(node_at_next_intersection);
+        if (range.size() <= 1)
+            continue;
+
+        // to find out about the above situation, we need to look at the next intersection (at d in
+        // the example). If the initial road can be merged to the left/right, we are about to adjust
+        // the angle.
+        const auto next_intersection_along_road =
+            GetConnectedRoads(node_at_intersection, road.turn.eid);
 
         // check if the u-turn edge at the next intersection could be merged to the left/right. If
         // this is the case and the road is not far away (see previous distance check), if

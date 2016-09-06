@@ -377,6 +377,11 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
 
             intersection =
                 turn_lane_handler.assignTurnLanes(node_u, edge_from_u, std::move(intersection));
+
+            std::cout << "[intersection] " << node_u << " " << edge_from_u << "\n";
+            for( auto road : intersection )
+                std::cout << "\t" << toString(road) << std::endl;
+
             const auto possible_turns = turn_analysis.transformIntersectionIntoTurns(intersection);
 
             // the entry class depends on the turn, so we have to classify the interesction for

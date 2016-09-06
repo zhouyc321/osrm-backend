@@ -1,7 +1,7 @@
 #include "util/debug.hpp"
 
-#include "engine/guidance/post_processing.hpp"
 #include "extractor/guidance/turn_instruction.hpp"
+#include "engine/guidance/post_processing.hpp"
 
 #include "engine/guidance/assemble_steps.hpp"
 #include "engine/guidance/lane_processing.hpp"
@@ -531,10 +531,9 @@ void collapseTurnAt(std::vector<RouteStep> &steps,
              isCollapsableInstruction(current_step.maneuver.instruction) &&
              compatible(one_back_step, current_step))
     {
-        // TODO check for lanes (https://github.com/Project-OSRM/osrm-backend/issues/2553)
         steps[one_back_index] = elongate(std::move(steps[one_back_index]), steps[step_index]);
-        if ((TurnType::Continue == one_back_step.maneuver.instruction.type ||
-             TurnType::Suppressed == one_back_step.maneuver.instruction.type) &&
+        // TODO check for lanes (https://github.com/Project-OSRM/osrm-backend/issues/2553)
+        if (TurnType::Continue == one_back_step.maneuver.instruction.type &&
             current_step.name_id != steps[two_back_index].name_id)
         {
             steps[one_back_index].maneuver.instruction.type = TurnType::Turn;
@@ -558,6 +557,11 @@ void collapseTurnAt(std::vector<RouteStep> &steps,
                     DirectionModifier::UTurn;
             }
             forwardStepSignage(steps[one_back_index], current_step);
+        }
+        else if (TurnType::NewName == current_step.maneuver.instruction.type &&
+                 steps[one_back_index].maneuver.instruction.type == TurnType::Suppressed)
+        {
+            steps[one_back_index].maneuver.instruction.type = TurnType::Turn;
         }
 
         if (TurnType::Merge == one_back_step.maneuver.instruction.type &&
@@ -586,6 +590,12 @@ void collapseTurnAt(std::vector<RouteStep> &steps,
     else if (isUTurn(one_back_step, current_step, steps[two_back_index]))
     {
         collapseUTurn(steps, two_back_index, one_back_index, step_index);
+    }
+    else if (TurnType::Suppressed == current_step.maneuver.instruction.type &&
+             one_back_step.name_id == current_step.name_id)
+    {
+        steps[one_back_index] = elongate(std::move(steps[one_back_index]), current_step);
+        invalidateStep(steps[step_index]);
     }
 }
 
@@ -633,10 +643,33 @@ bool isStaggeredIntersection(const RouteStep &previous, const RouteStep &current
 
 } // namespace
 
+// A check whether two instructions can be treated as one. This is only the case for very short
+// maneuvers that can, in some form, be seen as one. Lookahead of one step.
+bool collapsable(const RouteStep &step, const RouteStep &next)
+{
+    const auto is_short_step = step.distance < MAX_COLLAPSE_DISTANCE;
+    const auto instruction_can_be_collapsed = isCollapsableInstruction(step.maneuver.instruction);
+
+    const auto is_use_lane = step.maneuver.instruction.type == TurnType::UseLane;
+    const auto lanes_dont_change =
+        step.intersections.front().lanes == next.intersections.front().lanes;
+
+    if (is_short_step && instruction_can_be_collapsed)
+        return true;
+
+    // Prevent collapsing away important lane change steps
+    if (is_short_step && is_use_lane && lanes_dont_change)
+        return true;
+
+    return false;
+}
+
 // elongate a step by another. the data is added either at the front, or the back
 OSRM_ATTR_WARN_UNUSED
 RouteStep elongate(RouteStep step, const RouteStep &by_step)
 {
+    BOOST_ASSERT(step.mode == by_step.mode);
+
     step.duration += by_step.duration;
     step.distance += by_step.distance;
     BOOST_ASSERT(step.mode == by_step.mode);
@@ -670,27 +703,6 @@ RouteStep elongate(RouteStep step, const RouteStep &by_step)
 
 // Post processing can invalidate some instructions. For example StayOnRoundabout
 // is turned into exit counts. These instructions are removed by the following function
-
-// A check whether two instructions can be treated as one. This is only the case for very short
-// maneuvers that can, in some form, be seen as one. Lookahead of one step.
-bool collapsable(const RouteStep &step, const RouteStep &next)
-{
-    const auto is_short_step = step.distance < MAX_COLLAPSE_DISTANCE;
-    const auto instruction_can_be_collapsed = isCollapsableInstruction(step.maneuver.instruction);
-
-    const auto is_use_lane = step.maneuver.instruction.type == TurnType::UseLane;
-    const auto lanes_dont_change =
-        step.intersections.front().lanes == next.intersections.front().lanes;
-
-    if (is_short_step && instruction_can_be_collapsed)
-        return true;
-
-    // Prevent collapsing away important lane change steps
-    if (is_short_step && is_use_lane && lanes_dont_change)
-        return true;
-
-    return false;
-}
 
 std::vector<RouteStep> removeNoTurnInstructions(std::vector<RouteStep> steps)
 {
@@ -887,7 +899,7 @@ std::vector<RouteStep> collapseTurns(std::vector<RouteStep> steps)
                     // Turn Types in the response depend on whether we find the same road name
                     // (sliproad indcating a u-turn) or if we are turning onto a different road, in
                     // which case we use a turn.
-                    if (steps[getPreviousIndex(one_back_index)].name_id ==
+                    if (steps[getPreviousIndex(one_back_index, steps)].name_id ==
                             steps[step_index].name_id &&
                         steps[step_index].name_id != EMPTY_NAMEID)
                         steps[one_back_index].maneuver.instruction.type = TurnType::Continue;
@@ -1009,20 +1021,32 @@ std::vector<RouteStep> collapseTurns(std::vector<RouteStep> steps)
             // all turns that are handled lower down are also compatible
             collapseTurnAt(steps, two_back_index, one_back_index, step_index);
         }
-        else if (one_back_index > 0 && isUTurn(one_back_step,
-                                               current_step,
-                                               steps[getPreviousIndex(one_back_index, steps)]))
+
+        // Dedicated Handling of U-Turns. If our previous collapse made a u-turn possible, we can
+        // find it now.
+        if (steps[one_back_index].maneuver.instruction.type == TurnType::Turn)
         {
-            collapseUTurn(
-                steps, getPreviousIndex(one_back_index, steps), one_back_index, step_index);
+            const auto u_turn_one_back_index = getPreviousIndex(one_back_index, steps);
+            if (u_turn_one_back_index > 0)
+            {
+                const auto u_turn_two_back_index = getPreviousIndex(u_turn_one_back_index, steps);
+                if (isUTurn(steps[u_turn_one_back_index],
+                            steps[one_back_index],
+                            steps[u_turn_two_back_index]))
+                {
+                    collapseUTurn(
+                        steps, u_turn_two_back_index, u_turn_one_back_index, one_back_index);
+                }
+            }
         }
     }
 
     // handle final sliproad
     if (steps.size() >= 3 &&
-        steps[getPreviousIndex(steps.size() - 1)].maneuver.instruction.type == TurnType::Sliproad)
+        steps[getPreviousIndex(steps.size() - 1, steps)].maneuver.instruction.type ==
+            TurnType::Sliproad)
     {
-        steps[getPreviousIndex(steps.size() - 1)].maneuver.instruction.type = TurnType::Turn;
+        steps[getPreviousIndex(steps.size() - 1, steps)].maneuver.instruction.type = TurnType::Turn;
     }
 
     BOOST_ASSERT(steps.front().intersections.size() >= 1);
@@ -1332,6 +1356,7 @@ std::vector<RouteStep> buildIntersections(std::vector<RouteStep> steps)
             steps[last_valid_instruction] =
                 elongate(std::move(steps[last_valid_instruction]), step);
             step.maneuver.instruction = TurnInstruction::NO_TURN();
+            invalidateStep(steps[step_index]);
         }
         else if (!isSilent(instruction))
         {

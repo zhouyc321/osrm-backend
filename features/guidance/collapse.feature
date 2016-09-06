@@ -917,6 +917,6 @@ Feature: Collapse
             | f,j       | hohe,hohe                  | depart,arrive                              |
             | a,s       | hohe,a100,a100             | depart,on ramp left,arrive                 |
             | a,t       | hohe,a100,a100             | depart,on ramp right,arrive                |
-            | a,e       |                            |                                            |
+            | f,e       |                            |                                            |
             | q,j       | a100,a100,hohe,hohe        | depart,fork slight right,turn right,arrive |
             | q,e       | a100,a100,hohebruecke,hohe | depart,fork slight left, turn left,arrive  |
