@@ -440,7 +440,7 @@ void collapseUTurn(std::vector<RouteStep> &steps,
     // additionall collapse a name-change as welll
     const auto next_step_index = step_index + 1;
     const bool continues_with_name_change =
-        (next_step_index < steps.size()) &&
+        (next_step_index < steps.size()) && compatible(steps[next_step_index], steps[step_index]) &&
         (steps[next_step_index].maneuver.instruction.type == TurnType::UseLane ||
          isCollapsableInstruction(steps[next_step_index].maneuver.instruction));
     const bool u_turn_with_name_change =
@@ -1034,6 +1034,7 @@ std::vector<RouteStep> collapseTurns(std::vector<RouteStep> steps)
                             steps[one_back_index],
                             steps[u_turn_two_back_index]))
                 {
+                    std::cout << "Collapsing UTurn" << std::endl;
                     collapseUTurn(
                         steps, u_turn_two_back_index, u_turn_one_back_index, one_back_index);
                 }
