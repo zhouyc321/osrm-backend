@@ -1,7 +1,7 @@
-#include "extractor/guidance/turn_handler.hpp"
 #include "extractor/guidance/constants.hpp"
 #include "extractor/guidance/intersection_scenario_three_way.hpp"
 #include "extractor/guidance/toolkit.hpp"
+#include "extractor/guidance/turn_handler.hpp"
 
 #include "util/guidance/toolkit.hpp"
 
@@ -136,7 +136,7 @@ Intersection TurnHandler::handleThreeWayTurn(const EdgeID via_edge, Intersection
                OOOOOOO
      */
     const auto fork_range = findFork(via_edge, intersection);
-    if (fork_range.first == 1 && fork_range.second == 2)
+    if (fork_range.first == 1 && fork_range.second == 2 && obvious_index == 0)
         assignFork(via_edge, intersection[2], intersection[1]);
 
     /*  T Intersection

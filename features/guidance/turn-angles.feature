@@ -999,12 +999,12 @@ Feature: Simple Turns
             | j    | traffic_signals |
 
         When I route I should get
-            | waypoints | route             | turns                           |
-            | a,c       | rose,trift,trift  | depart,new name straight,arrive |
-            | a,k       | rose,muhle,muhle  | depart,turn right,arrive        |
-            | d,f       | trift,rose,rose   | depart,new name straight,arrive |
-            | d,k       | trift,muhle,muhle | depart,turn left,arrive         |
-            | d,c       | trift,trift,trift | depart,continue uturn,arrive    |
+            | waypoints | route             | turns                              |
+            | a,c       | rose,trift,trift  | depart,new name slight left,arrive |
+            | a,k       | rose,muhle,muhle  | depart,turn slight right,arrive    |
+            | d,f       | trift,rose,rose   | depart,new name straight,arrive    |
+            | d,k       | trift,muhle,muhle | depart,turn left,arrive            |
+            | d,c       | trift,trift,trift | depart,continue uturn,arrive       |
 
     #http://www.openstreetmap.org/#map=19/52.50740/13.44824
     Scenario: Turning Loop at the end of the road

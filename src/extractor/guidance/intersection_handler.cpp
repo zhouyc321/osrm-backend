@@ -1,5 +1,5 @@
-#include "extractor/guidance/intersection_handler.hpp"
 #include "extractor/guidance/constants.hpp"
+#include "extractor/guidance/intersection_handler.hpp"
 #include "extractor/guidance/toolkit.hpp"
 
 #include "util/coordinate_calculation.hpp"
@@ -401,6 +401,7 @@ std::size_t IntersectionHandler::findObviousTurn(const EdgeID via_edge,
         const bool continues_on_same_class = in_classification == obvious_candidate;
         return (has_high_priority && continues_on_same_class) ||
                (!obvious_candidate.IsLowPriorityRoadClass() &&
+                !in_classification.IsLowPriorityRoadClass() &&
                 compare_candidate.IsLowPriorityRoadClass());
     };
 

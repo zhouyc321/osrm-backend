@@ -113,7 +113,13 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
                       << toFloating(turn_coordinate.lon) << std::endl;
             examples.insert(turn_coordinate);
         }
-        return TrimCoordinatesToLength(std::move(coordinates), 5).back();
+        coordinates = TrimCoordinatesToLength(std::move(coordinates), 5);
+        if (coordinates.size() > 2 &&
+            util::coordinate_calculation::haversineDistance(turn_coordinate, coordinates[1]) <
+                ASSUMED_LANE_WIDTH)
+            return GetCorrectedCoordinate(turn_coordinate, coordinates[1], coordinates.back());
+        else
+            return coordinates.back();
     }
 
     // The coordinates along the road are in different distances from the source. If only very few
