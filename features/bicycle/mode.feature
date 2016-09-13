@@ -60,12 +60,36 @@ Feature: Bike - Mode flag
 
      	When I route I should get
      	 | from | to | route       | modes                                |
-     	 | a    | d  | ab,bc,cd,cd | cycling,cycling,cycling,cycling      |
-     	 | d    | a  | cd,bc,ab,ab | cycling,pushing bike,cycling,cycling |
-     	 | c    | a  | bc,ab,ab    | pushing bike,cycling,cycling         |
-     	 | d    | b  | cd,bc,bc    | cycling,pushing bike,pushing bike    |
-     	 | a    | c  | ab,bc,bc    | cycling,cycling,cycling              |
-     	 | b    | d  | bc,cd,cd    | cycling,cycling,cycling              |
+         | a    | f  | ab,bc,cf,cf | cycling,cycling,cycling,cycling      |
+         | a    | e  | ab,be,be    | cycling,cycling,cycling              |
+         | a    | d  | ab,bc,cd,cd | cycling,cycling,cycling,cycling      |
+         | a    | c  | ab,bc,bc    | cycling,cycling,cycling              |
+         | a    | b  | ab,ab       | cycling,cycling                      |
+         | b    | f  | bc,cf,cf    | cycling,cycling,cycling              |
+         | b    | e  | be,be       | cycling,cycling                      |
+         | b    | d  | bc,cd,cd    | cycling,cycling,cycling              |
+         | b    | c  | bc,bc       | cycling,cycling                      |
+         | b    | a  | ab,ab       | cycling,cycling                      |
+         | c    | a  | bc,ab,ab    | pushing bike,cycling,cycling         |
+         | c    | b  | bc,bc       | pushing bike,pushing bike            |
+         | c    | d  | cd,cd       | cycling,cycling                      |
+         | c    | e  | bc,be,be    | pushing bike,cycling,cycling         |
+         | c    | f  | cf,cf       | cycling,cycling                      |
+         | d    | a  | cd,bc,ab,ab | cycling,pushing bike,cycling,cycling |
+         | d    | b  | cd,bc,bc    | cycling,pushing bike,pushing bike    |
+         | d    | c  | cd,cd       | cycling,cycling                      |
+         | d    | e  | cd,bc,be,be | cycling,pushing bike,cycling,cycling |
+         | d    | f  | cd,cf,cf    | cycling,cycling,cycling              |
+         | e    | a  | be,ab,ab    | cycling,cycling,cycling              |
+         | e    | b  | be,be       | cycling,cycling                      |
+         | e    | c  | be,bc,bc    | cycling,cycling,cycling              |
+         | e    | d  | be,bc,cd,cd | cycling,cycling,cycling,cycling      |
+         | e    | f  | be,bc,cf,cf | cycling,cycling,cycling,cycling      |
+         | f    | a  | cf,bc,ab,ab | cycling,pushing bike,cycling,cycling |
+         | f    | b  | cf,bc,bc    | cycling,pushing bike,pushing bike    |
+         | f    | c  | cf,cf       | cycling,cycling                      |
+         | f    | d  | cf,cd,cd    | cycling,cycling,cycling              |
+         | f    | e  | cf,bc,be,be | cycling,pushing bike,cycling,cycling |
 
      Scenario: Bike - Mode when pushing on pedestrain streets
      	Given the node map

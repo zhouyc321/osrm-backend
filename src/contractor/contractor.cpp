@@ -513,6 +513,12 @@ EdgeID Contractor::LoadEdgeExpandedGraph(
                          maybe_load_internal_to_external_node_map,
                          maybe_load_geometries);
 
+    util::SimpleLogger().Write() << "GEOMETRIES_AFTER_READ" << std::endl;
+    std::for_each(m_geometry_list.begin(),
+                  m_geometry_list.end(),
+                  [&](const auto &edge) {
+                      util::SimpleLogger().Write() << "node_id: " << edge.node_id << std::endl;
+                  });
     if (update_edge_weights || update_turn_penalties)
     {
         // Here, we have to update the compressed geometry weights
@@ -700,6 +706,14 @@ EdgeID Contractor::LoadEdgeExpandedGraph(
     };
 
     tbb::parallel_invoke(maybe_save_geometries, save_datasource_indexes, save_datastore_names);
+
+    util::SimpleLogger().Write() << "GEOMETRIES_BEFORE_WRITE:" << std::endl;
+    std::for_each(m_geometry_list.begin(),
+                  m_geometry_list.end(),
+                  [&](const auto &edge) {
+                      util::SimpleLogger().Write() << "node_id: " << edge.node_id << std::endl;
+                  });
+
 
     auto penaltyblock = reinterpret_cast<const extractor::lookup::PenaltyBlock *>(
         edge_penalty_region.get_address());

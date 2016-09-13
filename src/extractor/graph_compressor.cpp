@@ -195,6 +195,7 @@ void GraphCompressor::Compress(const std::unordered_set<NodeID> &barrier_nodes,
     }
 
     PrintStatistics(original_number_of_nodes, original_number_of_edges, graph);
+    std::cout << "In GraphCompressor::Compress :198" << std::endl;
 
     // Repeate the loop, but now add all edges as uncompressed values.
     // The function AddUncompressedEdge does nothing if the edge is already
@@ -205,6 +206,8 @@ void GraphCompressor::Compress(const std::unordered_set<NodeID> &barrier_nodes,
         {
             const EdgeData &data = graph.GetEdgeData(edge_id);
             const NodeID target = graph.GetTarget(edge_id);
+            std::cout << "edge_id: " << edge_id << " name_id: " << data.name_id << " target: " << target << " distance: " << data.distance << " reversed: " << data.reversed << std::endl;
+
             geometry_compressor.AddUncompressedEdge(edge_id, target, data.distance);
         }
     }

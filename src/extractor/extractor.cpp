@@ -196,8 +196,10 @@ int Extractor::run(ScriptingEnvironment &scripting_environment)
                     result.second);
             }
             number_of_ways += resulting_ways.size();
+            std::cout << "Reading OSM Data (src/extractor/extractor.cpp:199" << std::endl;
             for (const auto &result : resulting_ways)
             {
+                std::cout << "way: " << result.first << " " << result.second.name << " forward: " << result.second.forward_speed << " backward: " << result.second.backward_speed << " duration: " << result.second.duration << " fwd_travel: " << (result.second.get_forward_mode() == 6) << " rev_travel: " << (result.second.get_backward_mode() == 6) << std::endl;
                 extractor_callbacks->ProcessWay(
                     static_cast<const osmium::Way &>(*(osm_elements[result.first])), result.second);
             }
@@ -443,7 +445,14 @@ Extractor::LoadNodeBasedGraph(std::unordered_set<NodeID> &barrier_nodes,
         util::SimpleLogger().Write(logWARNING) << "The input data is empty, exiting.";
         return std::shared_ptr<util::NodeBasedDynamicGraph>();
     }
+    util::NameTable name_table(config.names_file_name);
 
+    std::cout << "In Extractor::LoadNodeBasedGraph, the edge_list:" << std::endl;
+    std::for_each(edge_list.begin(),
+                  edge_list.end(),
+                  [&](const NodeBasedEdge &edge) {
+                      std::cout << "source: " << edge.source << " target: " << edge.target << " name_id: " << edge.name_id << " name: " << name_table.GetNameForID(edge.name_id) << " forward: " << edge.forward << " backward: " << " is_split: " << edge.is_split << std::endl;
+                  });
     return util::NodeBasedDynamicGraphFromEdges(number_of_node_based_nodes, edge_list);
 }
 

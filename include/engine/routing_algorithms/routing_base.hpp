@@ -215,11 +215,41 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
                     const PhantomNodes &phantom_node_pair,
                     std::vector<PathData> &unpacked_path) const
     {
+          std::cout << "Phantom pair first:" << phantom_node_pair.source_phantom << std::endl;
+          std::vector<NodeID> firstForwardNodes, firstReverseNodes;
+          facade->GetUncompressedForwardGeometry(phantom_node_pair.source_phantom.packed_geometry_id, firstForwardNodes);
+          std::for_each(firstForwardNodes.begin(),
+                        firstForwardNodes.end(),
+                        [&](const NodeID &n) {
+                            std::cout << "Forward node: " << facade->GetCoordinateOfNode(n) << std::endl;
+                        });
+          facade->GetUncompressedReverseGeometry(phantom_node_pair.source_phantom.packed_geometry_id, firstReverseNodes);
+          std::for_each(firstReverseNodes.begin(),
+                        firstReverseNodes.end(),
+                        [&](const NodeID &n) {
+                            std::cout << "Reverse node: " << facade->GetCoordinateOfNode(n) << std::endl;
+                        });
+          std::cout << "Phantom pair second:" << phantom_node_pair.target_phantom << std::endl;
+          std::vector<NodeID> secondForwardNodes, secondReverseNodes;
+          facade->GetUncompressedForwardGeometry(phantom_node_pair.target_phantom.packed_geometry_id, secondForwardNodes);
+          std::for_each(secondForwardNodes.begin(),
+                        secondForwardNodes.end(),
+                        [&](const NodeID &n) {
+                            std::cout << "Forward node: " << facade->GetCoordinateOfNode(n) << std::endl;
+                        });
+          facade->GetUncompressedReverseGeometry(phantom_node_pair.target_phantom.packed_geometry_id, secondReverseNodes);
+          std::for_each(secondReverseNodes.begin(),
+                        secondReverseNodes.end(),
+                        [&](const NodeID &n) {
+                            std::cout << "Reverse node: " << facade->GetCoordinateOfNode(n) << std::endl;
+                        });
         const bool start_traversed_in_reverse =
             (*packed_path_begin != phantom_node_pair.source_phantom.forward_segment_id.id);
         const bool target_traversed_in_reverse =
             (*std::prev(packed_path_end) != phantom_node_pair.target_phantom.forward_segment_id.id);
 
+        std::cout << "start_traversed_in_reverse: " << start_traversed_in_reverse << std::endl;
+        std::cout << "target_traversed_in_reverse: " << target_traversed_in_reverse << std::endl;
         BOOST_ASSERT(std::distance(packed_path_begin, packed_path_end) > 0);
         std::stack<std::pair<NodeID, NodeID>> recursion_stack;
 
@@ -236,6 +266,7 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
             *std::prev(packed_path_end) == phantom_node_pair.target_phantom.forward_segment_id.id ||
             *std::prev(packed_path_end) == phantom_node_pair.target_phantom.reverse_segment_id.id);
 
+        std::cout << "size of recursion stack: " << recursion_stack.size() << std::endl;
         std::pair<NodeID, NodeID> edge;
         while (!recursion_stack.empty())
         {
@@ -267,6 +298,7 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
             // found by the reverse search.
             if (SPECIAL_EDGEID == smaller_edge_id)
             {
+                std::cout << "downards edge found by reverse search" << std::endl;
                 for (const auto edge_id : facade->GetAdjacentEdgeRange(edge.second))
                 {
                     const EdgeWeight weight = facade->GetEdgeData(edge_id).distance;
@@ -278,11 +310,14 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
                     }
                 }
             }
+            std::cout << "smallest edge id: " << smaller_edge_id << std::endl;
+            std::cout << "smallest edge weight: " << edge_weight << std::endl;
             BOOST_ASSERT_MSG(edge_weight != INVALID_EDGE_WEIGHT, "edge id invalid");
 
             const EdgeData &ed = facade->GetEdgeData(smaller_edge_id);
             if (ed.shortcut)
             { // unpack
+                std::cout << "Break out the shortcut" << std::endl;
                 const NodeID middle_node_id = ed.id;
                 // again, we need to this in reversed order
                 recursion_stack.emplace(middle_node_id, edge.second);
@@ -292,6 +327,7 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
             {
                 BOOST_ASSERT_MSG(!ed.shortcut, "original edge flagged as shortcut");
                 unsigned name_index = facade->GetNameIndexFromEdgeID(ed.id);
+                std::cout << "name of edge: " << facade->GetNameForID(name_index) << std::endl;
                 const auto turn_instruction = facade->GetTurnInstructionForEdgeID(ed.id);
                 const extractor::TravelMode travel_mode =
                     (unpacked_path.empty() && start_traversed_in_reverse)
@@ -299,9 +335,12 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
                         : facade->GetTravelModeForEdgeID(ed.id);
 
                 const auto geometry_index = facade->GetGeometryIndexForEdgeID(ed.id);
+                std::cout << "geometry_index: " << geometry_index << std::endl;
                 std::vector<NodeID> id_vector;
                 std::vector<EdgeWeight> weight_vector;
                 std::vector<DatasourceID> datasource_vector;
+                const bool is_first_segment = unpacked_path.empty();
+
                 if (start_traversed_in_reverse)
                 {
                     facade->GetUncompressedReverseGeometry(geometry_index, id_vector);
@@ -314,6 +353,12 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
                     facade->GetUncompressedForwardWeights(geometry_index, weight_vector);
                     facade->GetUncompressedForwardDatasources(geometry_index, datasource_vector);
                 }
+                std::for_each(id_vector.begin(),
+                              id_vector.end(),
+                              [&](const NodeID &n) {
+                                  std::cout << "Node id: " << n << std::endl;
+                                  std::cout << "Node coordinates: " << facade->GetCoordinateOfNode(n) << std::endl;
+                              });
                 BOOST_ASSERT(id_vector.size() > 0);
                 BOOST_ASSERT(weight_vector.size() > 0);
                 BOOST_ASSERT(datasource_vector.size() > 0);
@@ -321,7 +366,6 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
                 auto total_weight = std::accumulate(weight_vector.begin(), weight_vector.end(), 0);
 
                 BOOST_ASSERT(weight_vector.size() == id_vector.size());
-                const bool is_first_segment = unpacked_path.empty();
 
                 const std::size_t start_index =
                     (is_first_segment
@@ -331,6 +375,7 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
                                 : phantom_node_pair.source_phantom.fwd_segment_position)
                          : 0);
                 const std::size_t end_index = id_vector.size();
+                std::cout << "start_index: " << start_index << std::endl;
 
                 BOOST_ASSERT(start_index >= 0);
                 BOOST_ASSERT(start_index < end_index);

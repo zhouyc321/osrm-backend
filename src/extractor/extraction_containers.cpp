@@ -548,6 +548,14 @@ void ExtractionContainers::WriteEdges(std::ofstream &file_out_stream) const
             continue;
         }
 
+        std::cout << "Edge: "
+            << "source: " << edge.result.source
+            << " target: " << edge.result.target
+            << " forward: " << edge.result.forward
+            << " backward: " << edge.result.backward
+            << " is_split: " << edge.result.is_split
+            << " weight: " << edge.result.weight
+            << std::endl;
         // IMPORTANT: here, we're using slicing to only write the data from the base
         // class of NodeBasedEdgeWithOSM
         NodeBasedEdge tmp = edge.result;

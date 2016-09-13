@@ -97,6 +97,9 @@ void EdgeBasedGraphFactory::InsertEdgeBasedNode(const NodeID node_u, const NodeI
     BOOST_ASSERT(node_u != SPECIAL_NODEID);
     BOOST_ASSERT(node_v != SPECIAL_NODEID);
 
+    std::cout << "node_u: " << node_u << std::endl;
+    std::cout << "node_v: " << node_v << std::endl;
+
     // find forward edge id and
     const EdgeID edge_id_1 = m_node_based_graph->FindEdge(node_u, node_v);
     BOOST_ASSERT(edge_id_1 != SPECIAL_EDGEID);
@@ -108,6 +111,9 @@ void EdgeBasedGraphFactory::InsertEdgeBasedNode(const NodeID node_u, const NodeI
     BOOST_ASSERT(edge_id_2 != SPECIAL_EDGEID);
 
     const EdgeData &reverse_data = m_node_based_graph->GetEdgeData(edge_id_2);
+
+    std::cout << "forward_is_special: " << (forward_data.edge_id == SPECIAL_NODEID) << std::endl;
+    std::cout << "reverse_is_special: " << (reverse_data.edge_id == SPECIAL_NODEID) << std::endl;
 
     if (forward_data.edge_id == SPECIAL_NODEID && reverse_data.edge_id == SPECIAL_NODEID)
     {
@@ -285,6 +291,7 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedNodes()
             // if we found a non-forward edge reverse and try again
             if (edge_data.edge_id == SPECIAL_NODEID)
             {
+                std::cout << "OH SHIT LOOKS LIKE WE'VE GOT A SPECIAL ONE" << std::endl;
                 InsertEdgeBasedNode(node_v, node_u);
             }
             else
@@ -293,6 +300,13 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedNodes()
             }
         }
     }
+
+    std::cout << "edge-based node list:" << std::endl;
+    std::for_each(m_edge_based_node_list.begin(),
+                  m_edge_based_node_list.end(),
+                  [&](const auto &node) {
+                      std::cout << "fwd_seg_id: " << node.forward_segment_id.id << " rev_seg_id: " << node.reverse_segment_id.id << " u: " << node.u << " v: " << node.v << " name_id: " << node.name_id << " packed_geometry_id: " << node.packed_geometry_id << " fwd_segment_position: " << node.fwd_segment_position << std::endl;
+                  });
 
     BOOST_ASSERT(m_edge_based_node_list.size() == m_edge_based_node_is_startpoint.size());
     BOOST_ASSERT(m_max_edge_id + 1 == m_edge_based_node_weights.size());
@@ -446,6 +460,7 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                 distance += turn_penalty;
 
                 BOOST_ASSERT(m_compressed_edge_container.HasZippedEntryForID(edge_from_u));
+                std::cout << "adding to original_edge_data_vector: edge_from_u: " << edge_from_u << " zipped_position: " << m_compressed_edge_container.GetZippedPositionForID(edge_from_u) << " position: " << m_compressed_edge_container.GetPositionForID(edge_from_u) << " edge_data1.name: " << edge_data1.name_id << " turn_instruction: " << turn_instruction.type << std::endl;
                 original_edge_data_vector.emplace_back(
                     m_compressed_edge_container.GetZippedPositionForID(edge_from_u),
                     edge_data1.name_id,
@@ -565,6 +580,22 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                                   sizeof(util::guidance::LaneTupelIdPair) * lane_data.size());
 
     util::SimpleLogger().Write() << "done.";
+
+    /*
+    std::cout << "original_edge_data_vector:" << std::endl;
+    std::for_each(original_edge_data_vector.begin(),
+                  original_edge_data_vector.end(),
+                  [&](const OriginalEdgeData &data) {
+                      std::cout << "via_node: " << data.via_node << " name_id: " << data.name_id << std::endl;
+                  });
+                  */
+
+    std::cout << "m_edge_based_edge_list:" << std::endl;
+    std::for_each(m_edge_based_edge_list.begin(),
+                  m_edge_based_edge_list.end(),
+                  [&](const EdgeBasedEdge &data) {
+                      std::cout << "source: " << data.source << " target: " << data.target << " edge_id: " << data.edge_id << " weight: " << data.weight << " forward: " << data.forward << " backward: " << data.backward << std::endl;
+                  });
 
     FlushVectorToStream(edge_data_file, original_edge_data_vector);
 
