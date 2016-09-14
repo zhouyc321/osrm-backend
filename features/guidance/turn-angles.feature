@@ -913,14 +913,14 @@ Feature: Simple Turns
             | a |   |   |   | b |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | c |
 
         And the ways
-            | nodes | name | ref | lanes | highway      |
-            | abc   | mich | b9  | 3     | primary      |
-            | fgh   | mich | b9  | 3     | primary      |
-            | bdeg  | mich |     |       | primary_link |
+            | nodes | name | ref | lanes | highway      | oneway |
+            | abc   | mich | b9  | 3     | primary      | yes    |
+            | fgh   | mich | b9  | 3     | primary      | yes    |
+            | bdeg  | mich |     |       | primary_link | yes    |
 
         When I route I should get
-            | waypoints | route                         | turns                        |
-            | a,h       | mich (b9),mich (b9),mich (b9) | depart,continue uturn,arrive |
+            | waypoints | route          | ref      | turns                        |
+            | a,h       | mich,mich,mich | b9,b9,b9 | depart,continue uturn,arrive |
 
     #http://www.openstreetmap.org/#map=19/52.49449/13.18116
     Scenario: Curved Parking Lot Road

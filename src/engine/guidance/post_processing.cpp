@@ -42,8 +42,10 @@ const constexpr double MAX_COLLAPSE_DISTANCE = 30;
 // check if at least one of the turns is actually a maneuver
 inline bool hasManeuver(const RouteStep &first, const RouteStep &second)
 {
-    return first.maneuver.instruction.type != TurnType::Suppressed ||
-           second.maneuver.instruction.type != TurnType::Suppressed;
+    return (first.maneuver.instruction.type != TurnType::Suppressed ||
+            second.maneuver.instruction.type != TurnType::Suppressed) &&
+           (first.maneuver.instruction.type != TurnType::NoTurn &&
+            second.maneuver.instruction.type != TurnType::NoTurn);
 }
 
 // forward all signage/name data from one step to another.
@@ -67,6 +69,7 @@ inline bool choiceless(const RouteStep &step, const RouteStep &previous)
                                    1 >= std::count(step.intersections.front().entry.begin(),
                                                    step.intersections.front().entry.end(),
                                                    true);
+
     return is_without_choice;
 }
 
@@ -357,7 +360,6 @@ bool isUTurn(const RouteStep &in_step, const RouteStep &out_step, const RouteSte
                                        choiceless(out_step, in_step) ||
                                        (isLinkroad(in_step) && out_step.name_id != EMPTY_NAMEID &&
                                         pre_in_step.name_id == out_step.name_id);
-
     const bool takes_u_turn = bearingsAreReversed(
         util::bearing::reverseBearing(
             in_step.intersections.front().bearings[in_step.intersections.front().in]),
@@ -429,6 +431,8 @@ void collapseUTurn(std::vector<RouteStep> &steps,
                    const std::size_t one_back_index,
                    const std::size_t step_index)
 {
+    // std::cout << "Collapsing UTurn" << step_index << " " << one_back_index << " " <<
+    // two_back_index << std::endl;
     BOOST_ASSERT(two_back_index < steps.size());
     BOOST_ASSERT(step_index < steps.size());
     BOOST_ASSERT(one_back_index < steps.size());
@@ -440,7 +444,8 @@ void collapseUTurn(std::vector<RouteStep> &steps,
     // additionall collapse a name-change as welll
     const auto next_step_index = step_index + 1;
     const bool continues_with_name_change =
-        (next_step_index < steps.size()) && compatible(steps[next_step_index], steps[step_index]) &&
+        (next_step_index + 1 < steps.size()) &&
+        compatible(steps[next_step_index], steps[step_index]) &&
         (steps[next_step_index].maneuver.instruction.type == TurnType::UseLane ||
          isCollapsableInstruction(steps[next_step_index].maneuver.instruction));
     const bool u_turn_with_name_change =
@@ -458,9 +463,7 @@ void collapseUTurn(std::vector<RouteStep> &steps,
                                                     // continue statement at the
                                                     // beginning of this function
         }
-
-        steps[one_back_index].name = steps[two_back_index].name;
-        steps[one_back_index].name_id = steps[two_back_index].name_id;
+        forwardStepSignage(steps[one_back_index], steps[two_back_index]);
         steps[one_back_index].maneuver.instruction.type = TurnType::Continue;
         steps[one_back_index].maneuver.instruction.direction_modifier = DirectionModifier::UTurn;
     }
@@ -850,8 +853,6 @@ std::vector<RouteStep> collapseTurns(std::vector<RouteStep> steps)
     {
         const auto &current_step = steps[step_index];
         const auto next_step_index = step_index + 1;
-        if (current_step.maneuver.instruction.type == TurnType::NoTurn)
-            continue;
         const auto one_back_index = getPreviousIndex(step_index, steps);
         BOOST_ASSERT(one_back_index < steps.size());
 
@@ -1022,25 +1023,27 @@ std::vector<RouteStep> collapseTurns(std::vector<RouteStep> steps)
             collapseTurnAt(steps, two_back_index, one_back_index, step_index);
         }
 
-        // Dedicated Handling of U-Turns. If our previous collapse made a u-turn possible, we can
-        // find it now.
-        if (steps[one_back_index].maneuver.instruction.type == TurnType::Turn)
+        std::cout << "Check: " << step_index << std::endl;
+        if (steps[step_index].maneuver.instruction.type == TurnType::Turn)
         {
-            const auto u_turn_one_back_index = getPreviousIndex(one_back_index, steps);
+            std::cout << "Check Level 0" << std::endl;
+            const auto u_turn_one_back_index = getPreviousIndex(step_index, steps);
             if (u_turn_one_back_index > 0)
             {
                 const auto u_turn_two_back_index = getPreviousIndex(u_turn_one_back_index, steps);
+                std::cout << "Check Level 1" << std::endl;
                 if (isUTurn(steps[u_turn_one_back_index],
-                            steps[one_back_index],
+                            steps[step_index],
                             steps[u_turn_two_back_index]))
                 {
-                    std::cout << "Collapsing UTurn" << std::endl;
-                    collapseUTurn(
-                        steps, u_turn_two_back_index, u_turn_one_back_index, one_back_index);
+                    std::cout << "Collapsing UTurn: " << u_turn_two_back_index << " "
+                              << u_turn_one_back_index << " " << step_index << std::endl;
+                    collapseUTurn(steps, u_turn_two_back_index, u_turn_one_back_index, step_index);
                 }
             }
         }
     }
+    std::cout << "Done" << std::endl;
 
     // handle final sliproad
     if (steps.size() >= 3 &&
