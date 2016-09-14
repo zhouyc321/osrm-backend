@@ -374,7 +374,9 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
             auto intersection = turn_analysis.getIntersection(node_u, edge_from_u);
             intersection =
                 turn_analysis.assignTurnTypes(node_u, edge_from_u, std::move(intersection));
-
+            std::cout << "[intersection]\n" << std::endl;
+            for( auto road : intersection )
+                std::cout << "\t" << toString(road) << std::endl;
             intersection =
                 turn_lane_handler.assignTurnLanes(node_u, edge_from_u, std::move(intersection));
 
@@ -434,6 +436,8 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
 
                 const int32_t turn_penalty =
                     scripting_environment.GetTurnPenalty(180. - turn.angle);
+
+                std::cout << "Penalty: " << turn_penalty << " for angle: " << turn.angle << std::endl;
                 const auto turn_instruction = turn.instruction;
 
                 if (turn_instruction.direction_modifier == guidance::DirectionModifier::UTurn)
