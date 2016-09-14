@@ -7,6 +7,8 @@ var classes = require('./data_classes');
 
 module.exports = function () {
     this.initializeOptions = (callback) => {
+        this.envVars = {};
+
         this.profile = this.profile || this.DEFAULT_SPEEDPROFILE;
 
         this.OSMDB = this.OSMDB || new OSM.DB();
@@ -124,4 +126,9 @@ module.exports = function () {
         this.updateFingerprintContract(args);
         callback();
     };
+
+    this.setEnvVar = (key, name, callback) => {
+        this.envVars[key] = name;
+        callback();
+    }
 };

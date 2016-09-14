@@ -194,6 +194,9 @@ module.exports = function () {
     this.extractData = (callback) => {
         this.logPreprocessInfo();
         this.log(util.format('== Extracting %s.osm...', this.osmData.osmFile), 'preprocess');
+        if (this.envVar) {
+            process.env[this.envVar.key] = this.envVar.value;
+        }
         var cmd = util.format('%s/osrm-extract %s.osm %s --profile %s/%s.lua >>%s 2>&1',
             this.BIN_PATH, this.osmData.osmFile, this.extractArgs || '', this.PROFILES_PATH, this.profile, this.PREPROCESS_LOG_FILE);
         this.log(cmd);
