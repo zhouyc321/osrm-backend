@@ -2,6 +2,7 @@
 #define EXTRACTOR_CALLBACKS_HPP
 
 #include "extractor/guidance/turn_lane_types.hpp"
+#include "util/djb2.hpp"
 #include "util/typedefs.hpp"
 
 #include <boost/functional/hash.hpp>
@@ -25,10 +26,10 @@ template <> struct hash<std::tuple<std::string, std::string, std::string, std::s
         noexcept
     {
         std::size_t seed = 0;
-        boost::hash_combine(seed, std::get<0>(mk));
-        boost::hash_combine(seed, std::get<1>(mk));
-        boost::hash_combine(seed, std::get<2>(mk));
-        boost::hash_combine(seed, std::get<3>(mk));
+        boost::hash_combine(seed, osrm::util::djb2(std::get<0>(mk).c_str()));
+        boost::hash_combine(seed, osrm::util::djb2(std::get<1>(mk).c_str()));
+        boost::hash_combine(seed, osrm::util::djb2(std::get<2>(mk).c_str()));
+        boost::hash_combine(seed, osrm::util::djb2(std::get<3>(mk).c_str()));
         return seed;
     }
 };
