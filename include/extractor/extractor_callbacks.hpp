@@ -65,6 +65,16 @@ class ExtractorCallbacks
   public:
     explicit ExtractorCallbacks(ExtractionContainers &extraction_containers);
 
+    ~ExtractorCallbacks() {
+      stats();
+    }
+
+    void stats() const {
+        util::SimpleLogger().Write() << ">>> DedupMap: " << string_map.size();
+        util::SimpleLogger().Write() << ">>> DedupMap/Bucket: " << string_map.bucket_count();
+        util::SimpleLogger().Write() << ">>> DedupMap/Load: " << string_map.load_factor();
+    }
+
     ExtractorCallbacks(const ExtractorCallbacks &) = delete;
     ExtractorCallbacks &operator=(const ExtractorCallbacks &) = delete;
 

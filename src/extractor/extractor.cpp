@@ -164,11 +164,18 @@ int Extractor::run(ScriptingEnvironment &scripting_environment)
         tbb::concurrent_vector<std::pair<std::size_t, ExtractionWay>> resulting_ways;
         tbb::concurrent_vector<boost::optional<InputRestrictionContainer>> resulting_restrictions;
 
+        std::atomic_size_t count{0};
+
         // setup restriction parser
         const RestrictionParser restriction_parser(scripting_environment);
 
         while (const osmium::memory::Buffer buffer = reader.read())
         {
+            if (count.load() % 1'000 == 0)
+              extractor_callbacks->stats();
+
+            count.fetch_add(1);
+
             // create a vector of iterators into the buffer
             std::vector<osmium::memory::Buffer::const_iterator> osm_elements;
             for (auto iter = std::begin(buffer), end = std::end(buffer); iter != end; ++iter)
@@ -217,6 +224,8 @@ int Extractor::run(ScriptingEnvironment &scripting_environment)
 
         // take control over the turn lane map
         turn_lane_map = extractor_callbacks->moveOutLaneDescriptionMap();
+
+        util::SimpleLogger().Write() << ">>> TurnLaneMap: " << turn_lane_map.size();
 
         extractor_callbacks.reset();
 
