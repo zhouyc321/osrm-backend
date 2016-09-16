@@ -19,6 +19,7 @@
 
 #include "extractor/compressed_edge_container.hpp"
 #include "extractor/restriction_map.hpp"
+#include "util/heap_profiler.hpp"
 #include "util/static_graph.hpp"
 #include "util/static_rtree.hpp"
 
@@ -108,7 +109,11 @@ transformTurnLaneMapIntoArrays(const guidance::LaneDescriptionMap &turn_lane_map
  */
 int Extractor::run(ScriptingEnvironment &scripting_environment)
 {
+    util::HeapProfiler profiler0{"Extractor"};
+
     {
+        util::HeapProfiler profiler1{"Extraction"};
+
         util::LogPolicy::GetInstance().Unmute();
         TIMER_START(extracting);
 
@@ -167,6 +172,8 @@ int Extractor::run(ScriptingEnvironment &scripting_environment)
         // setup restriction parser
         const RestrictionParser restriction_parser(scripting_environment);
 
+        profiler1.Dump("StartParsing");
+
         while (const osmium::memory::Buffer buffer = reader.read())
         {
             // create a vector of iterators into the buffer
@@ -215,6 +222,8 @@ int Extractor::run(ScriptingEnvironment &scripting_environment)
                                      << number_of_ways << " ways, and " << number_of_relations
                                      << " relations";
 
+        profiler1.Dump("EndParsing");
+
         // take control over the turn lane map
         turn_lane_map = extractor_callbacks->moveOutLaneDescriptionMap();
 
@@ -237,9 +246,14 @@ int Extractor::run(ScriptingEnvironment &scripting_environment)
         TIMER_STOP(extracting);
         util::SimpleLogger().Write() << "extraction finished after " << TIMER_SEC(extracting)
                                      << "s";
+
+        profiler1.Dump("EndExtract");
     }
 
     {
+        util::HeapProfiler profiler2{"EdgeBasedGraph"};
+
+
         // Transform the node-based graph that OSM is based on into an edge-based graph
         // that is better for routing.  Every edge becomes a node, and every valid
         // movement (e.g. turn from A->B, and B->A) becomes an edge
