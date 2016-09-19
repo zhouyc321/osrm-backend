@@ -432,15 +432,19 @@ std::size_t IntersectionHandler::findObviousTurn(const EdgeID via_edge,
             node_based_graph.GetEdgeData(intersection[best_continue].turn.eid).road_classification;
 
         // don't prefer low priority classes
-        if (out_data.road_classification.IsLowPriorityRoadClass() &&
+        if (best != 0 && out_data.road_classification.IsLowPriorityRoadClass() &&
             !current_best_class.IsLowPriorityRoadClass())
             continue;
 
-        const bool is_better_choice_by_priority = obvious_by_road_class(
-            in_data.road_classification, out_data.road_classification, current_best_class);
+        const bool is_better_choice_by_priority =
+            best == 0 && obvious_by_road_class(in_data.road_classification,
+                                               out_data.road_classification,
+                                               current_best_class);
 
-        const bool other_is_better_choice_by_priority = obvious_by_road_class(
-            in_data.road_classification, current_best_class, out_data.road_classification);
+        const bool other_is_better_choice_by_priority =
+            best != 0 && obvious_by_road_class(in_data.road_classification,
+                                               current_best_class,
+                                               out_data.road_classification);
 
         if ((!other_is_better_choice_by_priority && deviation < best_deviation) ||
             is_better_choice_by_priority)
@@ -449,6 +453,7 @@ std::size_t IntersectionHandler::findObviousTurn(const EdgeID via_edge,
             best = i;
         }
     }
+
 
     // We don't consider empty names a valid continue feature. This distinguishes between missing
     // names and actual continuing roads.

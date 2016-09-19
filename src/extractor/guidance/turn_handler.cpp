@@ -394,7 +394,6 @@ Intersection TurnHandler::assignRightTurns(const EdgeID via_edge,
         else if (2 >= (intersection[1].entry_allowed + intersection[2].entry_allowed +
                        intersection[3].entry_allowed))
         {
-            std::cout << "Conflicting Turns to the right" << std::endl;
             // at least a single invalid
             if (!intersection[3].entry_allowed)
             {
