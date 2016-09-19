@@ -196,7 +196,7 @@ Status TilePlugin::HandleRequest(const api::TileParameters &parameters, std::str
         uint8_t forward_datasource = 0;
         uint8_t reverse_datasource = 0;
 
-        if (edge.packed_geometry_id != SPECIAL_EDGEID)
+        if (edge.packed_geometry_id != SPECIAL_GEOMETRYID)
         {
             const std::vector<EdgeWeight> forward_weight_vector =
                 facade.GetUncompressedForwardWeights(edge.packed_geometry_id);
@@ -287,7 +287,7 @@ Status TilePlugin::HandleRequest(const api::TileParameters &parameters, std::str
 
                 std::string name = facade.GetNameForID(edge.name_id);
 
-                if (edge.packed_geometry_id != SPECIAL_EDGEID)
+                if (edge.packed_geometry_id != SPECIAL_GEOMETRYID)
                 {
                     const std::vector<EdgeWeight> forward_weight_vector =
                         facade.GetUncompressedForwardWeights(edge.packed_geometry_id);
