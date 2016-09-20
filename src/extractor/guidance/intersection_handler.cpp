@@ -137,7 +137,10 @@ TurnInstruction IntersectionHandler::getInstructionForObvious(const std::size_t 
             }
             else
             {
-                return {TurnType::NewName, getTurnDirection(road.turn.angle)};
+                if (in_mode == out_mode)
+                    return {TurnType::NewName, getTurnDirection(road.turn.angle)};
+                else
+                    return {TurnType::Notification, getTurnDirection(road.turn.angle)};
             }
         }
         else

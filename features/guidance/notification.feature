@@ -22,7 +22,7 @@ Feature: Notification on turn onto mode change
 
         When I route I should get
             | waypoints | route                   | turns                                                                          |
-            | a,g       | bingo,ferry,wingo,wingo | depart,new name straight,new name right,arrive                                 |
+            | a,g       | bingo,ferry,wingo,wingo | depart,notification straight,notification right,arrive                                 |
 
     Scenario: Turn onto a Ferry
         Given the node map
@@ -42,26 +42,24 @@ Feature: Notification on turn onto mode change
 
         When I route I should get
             | waypoints | route                   | turns                                                                          |
-            | g,a       | wingo,ferry,ferry,bingo,bingo | depart,new name right,continue right,new name right,arrive               |
+            | g,a       | wingo,ferry,ferry,bingo,bingo | depart,notification right,continue right,notification right,arrive               |
 
     Scenario: Straight onto a Ferry
         Given the node map
-            |   |   |   |   |   |   | g |   |
             |   |   |   |   |   |   |   |   |
             | a | b | c |   |   | d |   | i |
-            |   |   |   |   |   |   | f |   |
             |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   | f |   |
 
         And the ways
-            | nodes | highway | route | name    |
-            | ab    | primary |       | yonkers |
-            | bc    | primary |       | dingo   |
-            | ca    | primary |       | bingo   |
-            | cd    |         | ferry | ferry   |
-            | fdc   |         | ferry | ferry   |
-            | gi    | primary |       | wingo   |
-            | fi    | primary |       | dolly   |
+            | nodes | highway | route | name    | oneway |
+            | ab    | primary |       | yonkers | yes    |
+            | bc    | primary |       | dingo   | yes    |
+            | ca    | primary |       | bingo   | yes    |
+            | dc    |         | ferry | ferry   | no     |
+            | df    | primary |       | maple   | yes    |
+            | fi    | primary |       | dolly   | yes    |
 
         When I route I should get
             | waypoints | route                            | turns                                                                          |
-            | a,i       | yonkers,ferry,ferry,dolly,dolly | depart,new name right,continue right,new name right,arrive               |
+            | a,i       | yonkers,ferry,maple,dolly,dolly  | depart,turn straight,notification right,new name sharp left,arrive             |
