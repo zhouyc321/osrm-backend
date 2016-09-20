@@ -8,6 +8,7 @@
 #include "extractor/external_memory_node.hpp"
 #include "extractor/guidance/turn_instruction.hpp"
 #include "extractor/guidance/turn_lane_types.hpp"
+#include "extractor/compressed_edge_container.hpp"
 #include "extractor/original_edge_data.hpp"
 #include "engine/phantom_node.hpp"
 #include "util/exception.hpp"
@@ -24,6 +25,8 @@
 #include <string>
 #include <utility>
 #include <vector>
+
+#include <boost/range/adaptor/transformed.hpp>
 
 namespace osrm
 {
@@ -73,7 +76,7 @@ class BaseDataFacade
 
     virtual GeometryID GetGeometryIndexForEdgeID(const unsigned id) const = 0;
 
-    virtual std::vector<NodeID> GetUncompressedForwardGeometry(const EdgeID id) const = 0;
+    virtual boost::transformed_range<std::function<NodeID(const osrm::extractor::CompressedEdgeContainer::CompressedEdge &)>, const boost::iterator_range<std::iterator<std::input_iterator_tag, const extractor::CompressedEdgeContainer::CompressedEdge * > >> GetUncompressedForwardGeometry(const EdgeID id) const = 0;
 
     virtual std::vector<NodeID> GetUncompressedReverseGeometry(const EdgeID id) const = 0;
 

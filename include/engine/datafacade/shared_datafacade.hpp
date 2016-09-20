@@ -38,6 +38,8 @@
 #include <boost/thread/lock_guard.hpp>
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/tss.hpp>
+#include <boost/range/algorithm/transform.hpp>
+#include <boost/range/adaptor/transformed.hpp>
 
 namespace osrm
 {
@@ -519,22 +521,16 @@ class SharedDataFacade final : public BaseDataFacade
         return m_osmnodeid_list.at(id);
     }
 
-    virtual std::vector<NodeID> GetUncompressedForwardGeometry(const EdgeID id) const override final
+    virtual boost::transformed_range<std::function<NodeID(const osrm::extractor::CompressedEdgeContainer::CompressedEdge &)>, const boost::iterator_range<std::iterator<std::input_iterator_tag, const extractor::CompressedEdgeContainer::CompressedEdge *>>> GetUncompressedForwardGeometry(const EdgeID id) const override final
     {
         const unsigned begin = m_geometry_indices.at(id) + 1;
         const unsigned end = m_geometry_indices.at(id + 1);
 
-        std::vector<NodeID> result_nodes;
+        std::function<NodeID(const osrm::extractor::CompressedEdgeContainer::CompressedEdge&)> get_node_id = [](const osrm::extractor::CompressedEdgeContainer::CompressedEdge &edge) -> NodeID {
+            return edge.node_id;
+        };
 
-        result_nodes.reserve(end - begin);
-
-        std::for_each(m_geometry_list.begin() + begin,
-                      m_geometry_list.begin() + end,
-                      [&](const osrm::extractor::CompressedEdgeContainer::CompressedEdge &edge) {
-                          result_nodes.emplace_back(edge.node_id);
-                      });
-
-        return result_nodes;
+        return boost::make_iterator_range(m_geometry_list.begin() + begin, m_geometry_list.begin() + end) | boost::adaptors::transformed(get_node_id);
     }
 
     virtual std::vector<NodeID> GetUncompressedReverseGeometry(const EdgeID id) const override final

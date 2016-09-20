@@ -92,7 +92,7 @@ inline LegGeometry assembleGeometry(const datafacade::BaseDataFacade &facade,
 
     // Need to get the node ID following the destination phantom node
     // TODO: check if this was traversed in reverse??
-    const std::vector<NodeID> forward_geometry =
+    const auto forward_geometry =
         facade.GetUncompressedForwardGeometry(target_node.packed_geometry_id);
     geometry.osm_node_ids.push_back(
         facade.GetOSMNodeIDOfNode(forward_geometry[target_node.fwd_segment_position]));
