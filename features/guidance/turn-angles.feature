@@ -821,12 +821,12 @@ Feature: Simple Turns
             | b    | traffic_signals |
 
         When I route I should get
-            | waypoints | route               | turns                           |
-            | a,e       | Heide,Heide,Heide   | depart,continue uturn,arrive    |
-            | a,g       | Heide,Perle,Fenn    | depart,turn right,arrive        |
-            | a,h       | Heide,Friede,Friede | depart,new name straight,arrive |
-            | i,e       | Perle,Heide,Heide   | depart,turn right,arrive        |
-            | i,h       | Perle,Friede,Friede | depart,turn left, arrive        |
+            | waypoints | route               | turns                          |
+            | a,e       | Heide,Heide,Heide   | depart,continue uturn,arrive   |
+            | a,g       | Heide,Fenn,Fenn     | depart,turn right,arrive       |
+            | a,h       | Heide,Friede,Friede | depart,turn slight left,arrive |
+            | i,e       | Perle,Heide,Heide   | depart,turn right,arrive       |
+            | i,h       | Perle,Friede,Friede | depart,turn left,arrive        |
 
     #http://www.openstreetmap.org/#map=19/52.48630/13.36017
     Scenario: Don't Break U-turns
@@ -1024,6 +1024,7 @@ Feature: Simple Turns
             |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | o |   |   |   |   |   |   |   |   |   |   |   |   |
             |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
             |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | p |   |   |   |   |   |   |   |   |   |   |   | f |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
             |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
             |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | e |   |   |   |
             | a |   |   |   |   | b |   |   |   |   | c |   |   |   |   |   |   |   |   |   |   |   |   |   | d |   |   |   |   |   |   |

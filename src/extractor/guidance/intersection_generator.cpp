@@ -186,7 +186,7 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
                               << " at: " << std::setprecision(12) << toFloating(turn_coordinate.lat)
                               << " " << toFloating(turn_coordinate.lon) << std::endl;
 
-                    print = true;
+                    //print = true;
                     cases.insert(turn_coordinate);
                 }
             }

@@ -374,14 +374,11 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
             auto intersection = turn_analysis.getIntersection(node_u, edge_from_u);
             intersection =
                 turn_analysis.assignTurnTypes(node_u, edge_from_u, std::move(intersection));
-            std::cout << "[intersection]\n" << std::endl;
-            for( auto road : intersection )
-                std::cout << "\t" << toString(road) << std::endl;
             intersection =
                 turn_lane_handler.assignTurnLanes(node_u, edge_from_u, std::move(intersection));
 
             std::cout << "[intersection] " << node_u << " " << edge_from_u << "\n";
-            for( auto road : intersection )
+            for (auto road : intersection)
                 std::cout << "\t" << toString(road) << std::endl;
 
             const auto possible_turns = turn_analysis.transformIntersectionIntoTurns(intersection);
@@ -437,7 +434,8 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                 const int32_t turn_penalty =
                     scripting_environment.GetTurnPenalty(180. - turn.angle);
 
-                std::cout << "Penalty: " << turn_penalty << " for angle: " << turn.angle << std::endl;
+                std::cout << "Penalty: " << turn_penalty << " for angle: " << turn.angle
+                          << std::endl;
                 const auto turn_instruction = turn.instruction;
 
                 if (turn_instruction.direction_modifier == guidance::DirectionModifier::UTurn)
@@ -445,7 +443,10 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                     distance += profile_properties.u_turn_penalty;
                 }
 
-                distance += turn_penalty;
+                // don't add turn penalty if it is not an actual turn. This heuristic is necessary
+                // since OSRM cannot handle looping roads/parallel roads
+                if (turn_instruction.type != guidance::TurnType::NoTurn)
+                    distance += turn_penalty;
 
                 BOOST_ASSERT(m_compressed_edge_container.HasEntryForID(edge_from_u));
                 original_edge_data_vector.emplace_back(
