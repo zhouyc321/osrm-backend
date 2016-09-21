@@ -381,6 +381,8 @@ double findTotalTurnAngle(const RouteStep &entry_step, const RouteStep &exit_ste
 
     const auto exit_angle = turn_angle(exit_step_entry_bearing, exit_step_exit_bearing);
     const auto entry_angle = turn_angle(entry_step_entry_bearing, entry_step_exit_bearing);
+    std::cout << "Entry: " << entry_intersection.in << " " << entry_intersection.out << std::endl;
+    std::cout << "Angles: " << entry_angle << " Exit: " << exit_angle << std::endl;
 
     // We allow for minor deviations from a straight line
     if ((entry_angle <= 185 && exit_angle <= 185) || (entry_angle >= 175 && exit_angle >= 175))
@@ -589,16 +591,20 @@ void collapseTurnAt(std::vector<RouteStep> &steps,
         steps[one_back_index].name_id = current_step.name_id;
         invalidateStep(steps[step_index]);
     }
-    // Potential U-Turn
-    else if (isUTurn(one_back_step, current_step, steps[two_back_index]))
-    {
-        collapseUTurn(steps, two_back_index, one_back_index, step_index);
-    }
     else if (TurnType::Suppressed == current_step.maneuver.instruction.type &&
              one_back_step.name_id == current_step.name_id)
     {
         steps[one_back_index] = elongate(std::move(steps[one_back_index]), current_step);
+        const auto angle = findTotalTurnAngle(one_back_step, current_step);
+        steps[one_back_index].maneuver.instruction.direction_modifier =
+            ::osrm::util::guidance::getTurnDirection(angle);
+
         invalidateStep(steps[step_index]);
+    }
+    // Potential U-Turn
+    else if (isUTurn(one_back_step, current_step, steps[two_back_index]))
+    {
+        collapseUTurn(steps, two_back_index, one_back_index, step_index);
     }
 }
 

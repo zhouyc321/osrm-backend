@@ -697,11 +697,11 @@ Feature: Simple Turns
             | dhij   | Siemens | no     |       | residential |
 
         When I route I should get
-            | waypoints | route                   | turns                               |
-            | a,j       | Siemens,Siemens,Siemens | depart,continue slight right,arrive |
-            | a,g       | Siemens,Erna,Erna       | depart,new name straight,arrive     |
-            | g,j       | Erna,Siemens,Siemens    | depart,turn sharp left,arrive       |
-            | g,a       | Erna,Siemens,Siemens    | depart,new name straight,arrive     |
+            | waypoints | route                   | turns                              |
+            | a,j       | Siemens,Siemens,Siemens | depart,continue right,arrive       |
+            | a,g       | Siemens,Erna,Erna       | depart,new name slight left,arrive |
+            | g,j       | Erna,Siemens,Siemens    | depart,turn sharp left,arrive      |
+            | g,a       | Erna,Siemens,Siemens    | depart,new name slight righ,arrive |
 
      #http://www.openstreetmap.org/#map=19/52.51303/13.32170
      Scenario: Ernst Reuter Platz
@@ -961,7 +961,7 @@ Feature: Simple Turns
         Given the node map
             # 0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27  28  29  30
             |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | d |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | d |   |
             | f |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | e |   |   |   |   |   |   |   |   |
             |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
             |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | g |   |   |   |   |   |   |   |   |   |   |   |   |   |
