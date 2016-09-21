@@ -133,6 +133,7 @@ inline std::vector<RouteStep> assembleSteps(const datafacade::BaseDataFacade &fa
                 }
 
                 bearings = detail::getIntermediateBearings(leg_geometry, segment_index);
+                std::cout << "Bearings: " << bearings.first << " " << bearings.second << std::endl;
                 const auto entry_class = facade.GetEntryClass(path_point.entry_classid);
                 const auto bearing_class =
                     facade.GetBearingClass(facade.GetBearingClassID(path_point.turn_via_node));

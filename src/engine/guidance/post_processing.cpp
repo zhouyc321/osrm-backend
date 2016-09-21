@@ -382,6 +382,7 @@ double findTotalTurnAngle(const RouteStep &entry_step, const RouteStep &exit_ste
     const auto exit_angle = turn_angle(exit_step_entry_bearing, exit_step_exit_bearing);
     const auto entry_angle = turn_angle(entry_step_entry_bearing, entry_step_exit_bearing);
     std::cout << "Entry: " << entry_intersection.in << " " << entry_intersection.out << std::endl;
+    std::cout << "Bearings: " << entry_step_entry_bearing << " " << entry_step_exit_bearing << std::endl;
     std::cout << "Angles: " << entry_angle << " Exit: " << exit_angle << std::endl;
 
     // We allow for minor deviations from a straight line
