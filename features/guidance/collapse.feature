@@ -826,18 +826,18 @@ Feature: Collapse
 
         And the ways
             | nodes | highway | route | name  | oneway |
-            | bf    | primary |       | road  | yes    |
+            | abf   | primary |       | road  | yes    |
             | hcd   | primary |       | road  | yes    |
             | bc    | primary |       |       | yes    |
             | di    | service |       | serv  | yes    |
             | ed    |         | ferry | ferry |        |
-            | gab   |         | ferry | ferry |        |
+            | ga    |         | ferry | ferry |        |
             | kg    | primary |       | on    | yes    |
             | ej    | primary |       | off   | yes    |
 
         When I route I should get
-            | waypoints | route                   | turns                                                                          |
-            | k,j       | on,ferry,,ferry,off,off | depart,new name straight,continue uturn,turn straight,new name straight,arrive |
+            | waypoints | route                            | turns                                                                                            |
+            | k,j       | on,ferry,road,road,ferry,off,off | depart,new name straight,new name straight,continue uturn,turn straight,new name straight,arrive |
 
     #http://www.openstreetmap.org/#map=19/52.48778/13.30024
     Scenario: Hohenzollerdammbrücke
