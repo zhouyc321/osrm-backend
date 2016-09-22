@@ -521,14 +521,18 @@ std::size_t IntersectionHandler::findObviousTurn(const EdgeID via_edge,
         if (num_continue_names.second >= 2 && best_continue_deviation >= 2 * NARROW_TURN_ANGLE)
             return true;
 
+        // continue data now most certainly exists
+        const auto &continue_data =
+            node_based_graph.GetEdgeData(intersection[best_continue].turn.eid);
+        if (obvious_by_road_class(in_data.road_classification,
+                                  continue_data.road_classification,
+                                  best_data.road_classification))
+            return false;
+
         // the best deviation is very straight and not a ramp
         if (best_deviation < best_continue_deviation && best_deviation < FUZZY_ANGLE_DIFFERENCE &&
             !best_data.road_classification.IsRampClass())
             return true;
-
-        // continue data now most certainly exists
-        const auto &continue_data =
-            node_based_graph.GetEdgeData(intersection[best_continue].turn.eid);
 
         // the continue road is of a lower priority, while the road continues on the same priority
         // with a better angle
@@ -543,6 +547,7 @@ std::size_t IntersectionHandler::findObviousTurn(const EdgeID via_edge,
 
     if (check_non_continue)
     {
+        std::cout << "Checking non-continue" << std::endl;
         // Find left/right deviation
         const double left_deviation = angularDeviation(
             intersection[(best + 1) % intersection.size()].turn.angle, STRAIGHT_ANGLE);
@@ -601,6 +606,7 @@ std::size_t IntersectionHandler::findObviousTurn(const EdgeID via_edge,
     }
     else
     {
+        std::cout << "Checking continue" << std::endl;
         const double deviation =
             angularDeviation(intersection[best_continue].turn.angle, STRAIGHT_ANGLE);
         const auto &continue_data =
