@@ -21,6 +21,22 @@ Feature: Basic trip planning
             | waypoints | trips |
             | a,b,c,d   | dcba  |
 
+    Scenario: Testbot - Trip planning with less than 10 nodes
+        Given the node map
+            | a | b | c | d |
+
+        And the ways
+            | nodes |
+            | ab    |
+            | bc    |
+            | cb    |
+            | da    |
+
+        When I plan a trip I should get
+            | waypoints | trips | durations |
+            | a,b,c,d   | dcba  | 6         |
+            | d,b,c,a   | acdb  | 6         |
+
     Scenario: Testbot - Trip planning with more than 10 nodes
         Given the node map
             | a | b | c | d |
