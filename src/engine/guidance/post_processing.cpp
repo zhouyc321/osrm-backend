@@ -382,7 +382,8 @@ double findTotalTurnAngle(const RouteStep &entry_step, const RouteStep &exit_ste
     const auto exit_angle = turn_angle(exit_step_entry_bearing, exit_step_exit_bearing);
     const auto entry_angle = turn_angle(entry_step_entry_bearing, entry_step_exit_bearing);
     std::cout << "Entry: " << entry_intersection.in << " " << entry_intersection.out << std::endl;
-    std::cout << "Bearings: " << entry_step_entry_bearing << " " << entry_step_exit_bearing << std::endl;
+    std::cout << "Bearings: " << entry_step_entry_bearing << " " << entry_step_exit_bearing
+              << std::endl;
     std::cout << "Angles: " << entry_angle << " Exit: " << exit_angle << std::endl;
 
     // We allow for minor deviations from a straight line
@@ -605,6 +606,19 @@ void collapseTurnAt(std::vector<RouteStep> &steps,
         steps[one_back_index].maneuver.instruction.direction_modifier =
             ::osrm::util::guidance::getTurnDirection(angle);
 
+        invalidateStep(steps[step_index]);
+    }
+    else if (TurnType::Turn == one_back_step.maneuver.instruction.type &&
+             TurnType::OnRamp == current_step.maneuver.instruction.type)
+    {
+        // turning onto a ramp makes the first turn into a ramp
+        steps[one_back_index] = elongate(std::move(steps[one_back_index]), current_step);
+        steps[one_back_index].maneuver.instruction.type = TurnType::OnRamp;
+        const auto angle = findTotalTurnAngle(one_back_step, current_step);
+        steps[one_back_index].maneuver.instruction.direction_modifier =
+            ::osrm::util::guidance::getTurnDirection(angle);
+
+        forwardStepSignage(steps[one_back_index], current_step);
         invalidateStep(steps[step_index]);
     }
 }
@@ -858,6 +872,8 @@ std::vector<RouteStep> collapseTurns(std::vector<RouteStep> steps)
     // first and last instructions are waypoints that cannot be collapsed
     for (std::size_t step_index = 1; step_index + 1 < steps.size(); ++step_index)
     {
+        std::cout << "At step: " << step_index << std::endl;
+        util::guidance::print(steps);
         const auto &current_step = steps[step_index];
         const auto next_step_index = step_index + 1;
         const auto one_back_index = getPreviousIndex(step_index, steps);
