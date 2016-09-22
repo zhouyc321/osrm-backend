@@ -454,7 +454,6 @@ std::size_t IntersectionHandler::findObviousTurn(const EdgeID via_edge,
         }
     }
 
-
     // We don't consider empty names a valid continue feature. This distinguishes between missing
     // names and actual continuing roads.
     if (in_data.name_id == EMPTY_NAMEID)
@@ -506,11 +505,43 @@ std::size_t IntersectionHandler::findObviousTurn(const EdgeID via_edge,
 
     // has no obvious continued road
     const auto &best_data = node_based_graph.GetEdgeData(intersection[best].turn.eid);
-    if (best_continue == 0 || (!all_continues_are_narrow &&
-                               (num_continue_names.first >= 2 && intersection.size() >= 4)) ||
-        (num_continue_names.second >= 2 && best_continue_deviation >= 2 * NARROW_TURN_ANGLE) ||
-        (best_deviation != best_continue_deviation && best_deviation < FUZZY_ANGLE_DIFFERENCE &&
-         !best_data.road_classification.IsRampClass()))
+
+    const auto check_non_continue = [&]() {
+        // no continue road exists
+        if (best_continue == 0)
+            return true;
+
+        // we have multiple continues and not all are narrow (treat all the same)
+        if (!all_continues_are_narrow &&
+            (num_continue_names.first >= 2 && intersection.size() >= 4))
+            return true;
+
+        // if the best continue is not narrow and we also have at least 2 possible choices, the
+        // intersection size does not matter anymore
+        if (num_continue_names.second >= 2 && best_continue_deviation >= 2 * NARROW_TURN_ANGLE)
+            return true;
+
+        // the best deviation is very straight and not a ramp
+        if (best_deviation < best_continue_deviation && best_deviation < FUZZY_ANGLE_DIFFERENCE &&
+            !best_data.road_classification.IsRampClass())
+            return true;
+
+        // continue data now most certainly exists
+        const auto &continue_data =
+            node_based_graph.GetEdgeData(intersection[best_continue].turn.eid);
+
+        // the continue road is of a lower priority, while the road continues on the same priority
+        // with a better angle
+        if (best_deviation < best_continue_deviation &&
+            in_data.road_classification == best_data.road_classification &&
+            continue_data.road_classification.GetPriority() >
+                best_data.road_classification.GetPriority())
+            return true;
+
+        return false;
+    }();
+
+    if (check_non_continue)
     {
         // Find left/right deviation
         const double left_deviation = angularDeviation(
@@ -547,14 +578,22 @@ std::size_t IntersectionHandler::findObviousTurn(const EdgeID via_edge,
             !obvious_to_left)
             return 0;
 
-        const bool distinct_to_left =
-            left_deviation / best_deviation >= DISTINCTION_RATIO ||
-            (left_deviation > best_deviation &&
-             (!intersection[left_index].entry_allowed && in_data.distance > 30));
-        const bool distinct_to_right =
-            right_deviation / best_deviation >= DISTINCTION_RATIO ||
-            (right_deviation > best_deviation &&
-             (!intersection[right_index].entry_allowed && in_data.distance > 30));
+        // check if a turn is distinct enough
+        const auto isDistinct = [&](std::size_t index, double deviation) {
+            const auto adjusted_distinction_ratio =
+                (in_data.road_classification == best_data.road_classification &&
+                 best_data.road_classification.GetPriority() <
+                     node_based_graph.GetEdgeData(intersection[index].turn.eid)
+                         .road_classification.GetPriority())
+                    ? 0.8 * DISTINCTION_RATIO
+                    : DISTINCTION_RATIO;
+            return index == 0 || deviation / best_deviation >= adjusted_distinction_ratio ||
+                   (deviation > best_deviation &&
+                    (!intersection[index].entry_allowed && in_data.distance > 30));
+        };
+
+        const bool distinct_to_left = isDistinct(left_index, left_deviation);
+        const bool distinct_to_right = isDistinct(right_index, right_deviation);
 
         // Well distinct turn that is nearly straight
         if ((distinct_to_left || obvious_to_left) && (distinct_to_right || obvious_to_right))
@@ -562,7 +601,6 @@ std::size_t IntersectionHandler::findObviousTurn(const EdgeID via_edge,
     }
     else
     {
-        std::cout << "Continue Obvious" << std::endl;
         const double deviation =
             angularDeviation(intersection[best_continue].turn.angle, STRAIGHT_ANGLE);
         const auto &continue_data =
