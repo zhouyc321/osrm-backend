@@ -16,7 +16,7 @@ namespace extractor
 struct OriginalEdgeData
 {
     explicit OriginalEdgeData(NodeID via_node,
-                              unsigned name_id,
+                              NameID name_id,
                               LaneDataID lane_data_id,
                               guidance::TurnInstruction turn_instruction,
                               EntryClassID entry_classid,
@@ -27,15 +27,14 @@ struct OriginalEdgeData
     }
 
     OriginalEdgeData()
-        : via_node(std::numeric_limits<unsigned>::max()),
-          name_id(std::numeric_limits<unsigned>::max()), entry_classid(INVALID_ENTRY_CLASSID),
+        : via_node(SPECIAL_NODEID), name_id(INVALID_NAMEID), entry_classid(INVALID_ENTRY_CLASSID),
           lane_data_id(INVALID_LANE_DATAID), turn_instruction(guidance::TurnInstruction::INVALID()),
           travel_mode(TRAVEL_MODE_INACCESSIBLE)
     {
     }
 
     NodeID via_node;
-    unsigned name_id;
+    NameID name_id;
     EntryClassID entry_classid;
     LaneDataID lane_data_id;
     guidance::TurnInstruction turn_instruction;

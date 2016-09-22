@@ -592,6 +592,11 @@ void collapseTurnAt(std::vector<RouteStep> &steps,
         steps[one_back_index].name_id = current_step.name_id;
         invalidateStep(steps[step_index]);
     }
+    // Potential U-Turn
+    else if (isUTurn(one_back_step, current_step, steps[two_back_index]))
+    {
+        collapseUTurn(steps, two_back_index, one_back_index, step_index);
+    }
     else if (TurnType::Suppressed == current_step.maneuver.instruction.type &&
              one_back_step.name_id == current_step.name_id)
     {
@@ -601,11 +606,6 @@ void collapseTurnAt(std::vector<RouteStep> &steps,
             ::osrm::util::guidance::getTurnDirection(angle);
 
         invalidateStep(steps[step_index]);
-    }
-    // Potential U-Turn
-    else if (isUTurn(one_back_step, current_step, steps[two_back_index]))
-    {
-        collapseUTurn(steps, two_back_index, one_back_index, step_index);
     }
 }
 

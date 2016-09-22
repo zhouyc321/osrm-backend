@@ -697,11 +697,11 @@ Feature: Simple Turns
             | dhij   | Siemens | no     |       | residential |
 
         When I route I should get
-            | waypoints | route                   | turns                              |
-            | a,j       | Siemens,Siemens,Siemens | depart,continue right,arrive       |
-            | a,g       | Siemens,Erna,Erna       | depart,new name slight left,arrive |
-            | g,j       | Erna,Siemens,Siemens    | depart,turn sharp left,arrive      |
-            | g,a       | Erna,Siemens,Siemens    | depart,new name slight righ,arrive |
+            | waypoints | route                   | turns                               |
+            | a,j       | Siemens,Siemens,Siemens | depart,continue right,arrive        |
+            | a,g       | Siemens,Erna,Erna       | depart,new name slight left,arrive  |
+            | g,j       | Erna,Siemens,Siemens    | depart,turn sharp left,arrive       |
+            | g,a       | Erna,Siemens,Siemens    | depart,new name slight right,arrive |
 
      #http://www.openstreetmap.org/#map=19/52.51303/13.32170
      Scenario: Ernst Reuter Platz

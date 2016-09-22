@@ -12,6 +12,7 @@
 #include "util/exception.hpp"
 #include "util/guidance/bearing_class.hpp"
 #include "util/guidance/entry_class.hpp"
+#include "util/guidance/turn_lanes.hpp"
 #include "util/integer_range.hpp"
 #include "util/string_util.hpp"
 #include "util/typedefs.hpp"
