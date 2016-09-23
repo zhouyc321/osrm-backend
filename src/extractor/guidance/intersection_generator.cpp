@@ -79,6 +79,16 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
     bool uturn_could_be_valid = false;
     const util::Coordinate turn_coordinate = node_info_list[turn_node];
     bool print = false;
+
+    const auto intersection_lanes = [this,turn_node]() {
+        std::uint8_t lanes = 0;
+        for (const EdgeID onto_edge : node_based_graph.GetAdjacentEdgeRange(turn_node))
+            lanes = std::max(
+                lanes,
+                node_based_graph.GetEdgeData(onto_edge).road_classification.GetNumberOfLanes());
+        return lanes;
+    }();
+
     for (const EdgeID onto_edge : node_based_graph.GetAdjacentEdgeRange(turn_node))
     {
         BOOST_ASSERT(onto_edge != SPECIAL_EDGEID);
@@ -104,11 +114,7 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
         // just as the target coordinate can. Here we compute the corrected coordinate for the
         // incoming edge.
         const auto first_coordinate = coordinate_extractor.GetCoordinateAlongRoad(
-            from_node,
-            via_eid,
-            INVERT,
-            turn_node,
-            node_based_graph.GetEdgeData(onto_edge).road_classification.GetNumberOfLanes());
+            from_node, via_eid, INVERT, turn_node, intersection_lanes);
 
         if (from_node == to_node)
         {
@@ -144,11 +150,7 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
             const constexpr double LOOKAHEAD_DISTANCE_WITHOUT_LANES = 10.0;
 
             const auto third_coordinate = coordinate_extractor.GetCoordinateAlongRoad(
-                turn_node,
-                onto_edge,
-                !INVERT,
-                to_node,
-                node_based_graph.GetEdgeData(via_eid).road_classification.GetNumberOfLanes());
+                turn_node, onto_edge, !INVERT, to_node, intersection_lanes);
 
             const auto compare_first =
                 getRepresentativeCoordinate(from_node,
@@ -186,7 +188,7 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
                               << " at: " << std::setprecision(12) << toFloating(turn_coordinate.lat)
                               << " " << toFloating(turn_coordinate.lon) << std::endl;
 
-                    //print = true;
+                    // print = true;
                     cases.insert(turn_coordinate);
                 }
             }
@@ -444,7 +446,7 @@ Intersection IntersectionGenerator::MergeSegregatedRoads(const NodeID intersecti
     };
 
     const auto merge = [combineAngles](const ConnectedRoad &first,
-                          const ConnectedRoad &second) -> ConnectedRoad {
+                                       const ConnectedRoad &second) -> ConnectedRoad {
         ConnectedRoad result = first.entry_allowed ? first : second;
         result.turn.angle = combineAngles(first.turn.angle, second.turn.angle);
         result.turn.bearing = combineAngles(first.turn.bearing, second.turn.bearing);

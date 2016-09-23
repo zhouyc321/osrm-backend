@@ -32,7 +32,7 @@ class CoordinateExtractor
                                             const EdgeID turn_edge,
                                             const bool traversed_in_reverse,
                                             const NodeID to_node,
-                                            const std::uint16_t number_of_in_lanes) const;
+                                            const std::uint8_t number_of_in_lanes) const;
 
     // instead of finding only a single coordinate, we can also list all coordinates along a road.
     std::vector<util::Coordinate> GetCoordinatesAlongRoad(const NodeID intersection_node,

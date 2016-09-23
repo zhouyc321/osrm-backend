@@ -66,7 +66,7 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
                                             const EdgeID turn_edge,
                                             const bool traversed_in_reverse,
                                             const NodeID to_node,
-                                            const std::uint16_t number_of_from_lanes) const
+                                            const std::uint8_t intersection_lanes) const
 {
     ++(*times_called);
     // we first extract all coordinates from the road
@@ -152,9 +152,9 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
     // the coordinate to correctly represent the turn. This could probably be improved using
     // information on the very first turn angle (requires knowledge about previous road) and the
     // respective lane widths.
-    const bool first_coordinate_is_far_away = [&segment_distances, number_of_from_lanes]() {
+    const bool first_coordinate_is_far_away = [&segment_distances, intersection_lanes]() {
         const auto considered_lanes =
-            number_of_from_lanes == 0 ? ASSUMED_LANE_COUNT : number_of_from_lanes;
+            intersection_lanes == 0 ? ASSUMED_LANE_COUNT : intersection_lanes;
         const auto required_distance =
             considered_lanes * 0.5 * ASSUMED_LANE_WIDTH + LOOKAHEAD_DISTANCE_WITHOUT_LANES;
         return segment_distances[1] > required_distance;
@@ -201,8 +201,6 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
         }
         return deviation;
     };
-
-    const auto number_of_turn_edge_lanes = turn_edge_data.road_classification.GetNumberOfLanes();
 
     // We use the sum of least squares to calculate a linear regression through our coordinates.
     // This regression gives a good idea of how the road can be perceived and corrects for initial
@@ -286,7 +284,7 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
 
     const bool starts_of_without_turn = [&]() {
         const auto considered_lanes =
-            number_of_from_lanes == 0 ? ASSUMED_LANE_COUNT : number_of_from_lanes;
+            intersection_lanes == 0 ? ASSUMED_LANE_COUNT : intersection_lanes;
         return straight_distance >=
                considered_lanes * 0.5 * ASSUMED_LANE_WIDTH + LOOKAHEAD_DISTANCE_WITHOUT_LANES;
     }();
@@ -369,8 +367,8 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
         const util::Coordinate destination_coordinate =
             node_coordinates[traversed_in_reverse ? intersection_node : to_node];
         std::cout << "Coordinates: Full: " << count << "  Reduced: " << coordinates.size()
-                  << " Lanes: " << (int)number_of_from_lanes << " "
-                  << (int)number_of_turn_edge_lanes << " Turn: " << std::setprecision(12)
+                  << " Lanes: " << (int)intersection_lanes << " "
+                  << " Turn: " << std::setprecision(12)
                   << toFloating(turn_coordinate.lat) << " " << toFloating(turn_coordinate.lon)
                   << " - " << toFloating(coordinates.back().lat) << " "
                   << toFloating(coordinates.back().lon)
@@ -417,13 +415,12 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
     const auto total_distance =
         std::accumulate(segment_distances.begin(), segment_distances.end(), 0.);
 
-    const auto IsCloseToLaneDistance = [number_of_from_lanes,
-                                        number_of_turn_edge_lanes](const double width) {
+    const auto IsCloseToLaneDistance = [intersection_lanes](const double width) {
         const auto maximal_lane_offset =
-            (std::max(number_of_from_lanes, (std::uint16_t)number_of_turn_edge_lanes) + 1) * 0.5 *
+            (std::max(intersection_lanes, (std::uint8_t)2) + 1) * 0.5 *
             ASSUMED_LANE_WIDTH;
         const auto minimal_lane_offset =
-            (std::min(number_of_from_lanes, (std::uint16_t)number_of_turn_edge_lanes)) * 0.5 *
+            (std::min(intersection_lanes, (std::uint8_t)2)) * 0.5 *
             ASSUMED_LANE_WIDTH;
         return minimal_lane_offset <= width && width <= maximal_lane_offset;
     };
@@ -458,7 +455,7 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
     // the road, index will be equal to coordinates.size() if the turn is not passing the test
     const std::size_t curved_offset_index = [&]() {
         const auto maximal_lane_offset =
-            (std::max(number_of_from_lanes, (std::uint16_t)number_of_turn_edge_lanes)) * 0.5 *
+            (std::max(intersection_lanes, (std::uint8_t)2)) * 0.5 *
             ASSUMED_LANE_WIDTH;
 
         // distance has to be long enough to even check
@@ -466,8 +463,7 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
             return coordinates.size();
 
         const auto offset_index = [segment_distances,
-                                   number_of_from_lanes,
-                                   number_of_turn_edge_lanes,
+                                   intersection_lanes,
                                    maximal_lane_offset,
                                    straight_distance]() {
             double current_segment_distance = 0;
@@ -578,15 +574,12 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
                       << toFloating(turn_coordinate.lon) << std::endl;
             examples.insert(turn_coordinate);
         }
-        const auto considered_lanes_from =
-            number_of_from_lanes == 0 ? ASSUMED_LANE_COUNT : number_of_from_lanes;
-        const double offset_from = 0.5 * considered_lanes_from * ASSUMED_LANE_WIDTH;
-        const auto considered_lanes_to =
-            number_of_turn_edge_lanes == 0 ? ASSUMED_LANE_COUNT : number_of_turn_edge_lanes;
-        const double offset_to = 0.5 * considered_lanes_to * ASSUMED_LANE_WIDTH + offset_from;
-        coordinates = TrimCoordinatesToLength(std::move(coordinates), offset_to);
+        const auto considered_lanes =
+            intersection_lanes == 0 ? ASSUMED_LANE_COUNT : intersection_lanes;
+        const double offset = 0.5 * considered_lanes * ASSUMED_LANE_WIDTH;
+        coordinates = TrimCoordinatesToLength(std::move(coordinates), offset);
         const auto vector_head = coordinates.back();
-        coordinates = TrimCoordinatesToLength(std::move(coordinates), offset_from);
+        coordinates = TrimCoordinatesToLength(std::move(coordinates), offset);
         BOOST_ASSERT(coordinates.size() >= 2);
         return GetCorrectedCoordinate(turn_coordinate, coordinates.back(), vector_head);
     }
