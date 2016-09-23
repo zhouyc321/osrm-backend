@@ -387,7 +387,8 @@ double findTotalTurnAngle(const RouteStep &entry_step, const RouteStep &exit_ste
     std::cout << "Angles: " << entry_angle << " Exit: " << exit_angle << std::endl;
 
     // We allow for minor deviations from a straight line
-    if ((entry_angle <= 185 && exit_angle <= 185) || (entry_angle >= 175 && exit_angle >= 175))
+    if ((entry_step.distance < MAX_COLLAPSE_DISTANCE && exit_step.intersections.size() == 1) ||
+        (entry_angle <= 185 && exit_angle <= 185) || (entry_angle >= 175 && exit_angle >= 175))
     {
         // both angles are in the same direction, the total turn gets increased
         //
@@ -496,6 +497,7 @@ void collapseTurnAt(std::vector<RouteStep> &steps,
          !(one_back_step.maneuver.instruction.type == TurnType::Merge)))
     // the check against merge is a workaround for motorways
     {
+        std::cout << "A" << std::endl;
         BOOST_ASSERT(two_back_index < steps.size());
         if (isUTurn(one_back_step, current_step, steps[two_back_index]))
         {
@@ -527,6 +529,13 @@ void collapseTurnAt(std::vector<RouteStep> &steps,
                      one_back_step.intersections.front().bearings.size() > 2)
                 steps[step_index].maneuver.instruction.type = TurnType::Turn;
 
+            if (TurnType::Merge != current_step.maneuver.instruction.type)
+            {
+                const auto total_angle = findTotalTurnAngle(steps[one_back_index], current_step);
+                steps[step_index].maneuver.instruction.direction_modifier =
+                    getTurnDirection(total_angle);
+            }
+
             steps[two_back_index] = elongate(std::move(steps[two_back_index]), one_back_step);
             // If the previous instruction asked to continue, the name change will have to
             // be changed into a turn
@@ -538,6 +547,7 @@ void collapseTurnAt(std::vector<RouteStep> &steps,
              isCollapsableInstruction(current_step.maneuver.instruction) &&
              compatible(one_back_step, current_step))
     {
+        std::cout << "B" << std::endl;
         steps[one_back_index] = elongate(std::move(steps[one_back_index]), steps[step_index]);
         // TODO check for lanes (https://github.com/Project-OSRM/osrm-backend/issues/2553)
         if (TurnType::Continue == one_back_step.maneuver.instruction.type &&
@@ -872,8 +882,7 @@ std::vector<RouteStep> collapseTurns(std::vector<RouteStep> steps)
     // first and last instructions are waypoints that cannot be collapsed
     for (std::size_t step_index = 1; step_index + 1 < steps.size(); ++step_index)
     {
-        std::cout << "At step: " << step_index << std::endl;
-        util::guidance::print(steps);
+        std::cout << "Step: " << step_index << std::endl;
         const auto &current_step = steps[step_index];
         const auto next_step_index = step_index + 1;
         const auto one_back_index = getPreviousIndex(step_index, steps);
