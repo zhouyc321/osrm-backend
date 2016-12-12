@@ -75,6 +75,7 @@ using DiscreteBearing = std::uint16_t;
 using EntryClassID = std::uint16_t;
 static const EntryClassID INVALID_ENTRY_CLASSID = std::numeric_limits<EntryClassID>::max();
 
+static const uint32_t XAD_INVALID_U32ID = std::numeric_limits<uint32_t>::max();
 static const NodeID SPECIAL_NODEID = std::numeric_limits<NodeID>::max();
 static const NodeID SPECIAL_SEGMENTID = std::numeric_limits<NodeID>::max() >> 1;
 static const EdgeID SPECIAL_EDGEID = std::numeric_limits<EdgeID>::max();
@@ -97,5 +98,33 @@ struct SegmentID
 };
 
 static_assert(sizeof(SegmentID) == 4, "SegmentID needs to be 4 bytes big");
+
+/** Xad Poi Data, the first application is for billboard
+ */
+
+class XadPoiData
+{
+public:
+    XadPoiData(const std::string& pid, std::uint64_t nid =0) :
+    poi_id(pid),
+    node_id(nid)
+    {}
+    bool IsValidNodeId()
+    {
+        return node_id!=0;
+    }
+    const std::string& GetPoiId()
+    {
+        return poi_id;
+    }
+    
+    std::uint64_t GetNodeId()
+    {
+        return node_id;
+    }
+private:
+    std::string    poi_id;
+    std::uint64_t  node_id;   // the second node,
+};
 
 #endif /* TYPEDEFS_H */

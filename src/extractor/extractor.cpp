@@ -87,9 +87,6 @@ transformTurnLaneMapIntoArrays(const guidance::LaneDescriptionMap &turn_lane_map
 }
 } // namespace
 
-    
-
-    
 /**
  * TODO: Refactor this function into smaller functions for better readability.
  *
@@ -161,15 +158,7 @@ int Extractor::run(ScriptingEnvironment &scripting_environment)
 
         boost::filesystem::ofstream timestamp_out(config.timestamp_file_name);
         timestamp_out.write(timestamp.c_str(), timestamp.length());
-        
-        // initialize xad ways_file_out and xad_nodes_out
-        boost::filesystem::ofstream xad_ways_out(config.xad_ways_file_name);
-        boost::filesystem::ofstream xad_nodes_out(config.xad_nodes_file_name);
-        if (!xad_ways_out || !xad_nodes_out)
-        {
-            throw util::exception("Could not open " + config.xad_ways_file_name + " or "+ config.xad_nodes_file_name + " for writing.");
-        }
-        
+
         // initialize vectors holding parsed objects
         tbb::concurrent_vector<std::pair<std::size_t, ExtractionNode>> resulting_nodes;
         tbb::concurrent_vector<std::pair<std::size_t, ExtractionWay>> resulting_ways;
@@ -205,16 +194,12 @@ int Extractor::run(ScriptingEnvironment &scripting_environment)
                 extractor_callbacks->ProcessNode(
                     static_cast<const osmium::Node &>(*(osm_elements[result.first])),
                     result.second);
-                extractor_callbacks->WriteXadNodes(xad_nodes_out, static_cast<const osmium::Node &>(*(osm_elements[result.first])));
             }
             number_of_ways += resulting_ways.size();
             for (const auto &result : resulting_ways)
             {
                 extractor_callbacks->ProcessWay(
                     static_cast<const osmium::Way &>(*(osm_elements[result.first])), result.second);
-                
-                extractor_callbacks->WriteXadWays(xad_ways_out, static_cast<const osmium::Way &>(*(osm_elements[result.first])));
-                
             }
             number_of_relations += resulting_restrictions.size();
             for (const auto &result : resulting_restrictions)

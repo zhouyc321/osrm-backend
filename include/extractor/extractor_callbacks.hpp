@@ -6,8 +6,7 @@
 
 #include <boost/functional/hash.hpp>
 #include <boost/optional/optional_fwd.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
+
 #include <string>
 #include <unordered_map>
 
@@ -68,9 +67,6 @@ class ExtractorCallbacks
 
     ExtractorCallbacks(const ExtractorCallbacks &) = delete;
     ExtractorCallbacks &operator=(const ExtractorCallbacks &) = delete;
-
-    void WriteXadNodes(boost::filesystem::ofstream & xad_nodes_out, const osmium::Node &input_node);
-    void WriteXadWays(boost::filesystem::ofstream & xad_ways_out, const osmium::Way &input_way);
 
     // warning: caller needs to take care of synchronization!
     void ProcessNode(const osmium::Node &current_node, const ExtractionNode &result_node);

@@ -75,9 +75,6 @@ struct ExtractorConfig
         edge_based_node_weights_output_path = basepath + ".osrm.enw";
         profile_properties_output_path = basepath + ".osrm.properties";
         intersection_class_data_output_path = basepath + ".osrm.icd";
-        
-        xad_ways_file_name = basepath + ".xad.ways";
-        xad_nodes_file_name = basepath + ".xad.nodes";
     }
 
     boost::filesystem::path input_path;
@@ -98,9 +95,7 @@ struct ExtractorConfig
     std::string rtree_leafs_output_path;
     std::string profile_properties_output_path;
     std::string intersection_class_data_output_path;
-    std::string xad_ways_file_name;
-    std::string xad_nodes_file_name;
-    
+
     unsigned requested_num_threads;
     unsigned small_component_size;
 

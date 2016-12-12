@@ -398,24 +398,8 @@ void ExtractorCallbacks::ProcessWay(const osmium::Way &input_way, const Extracti
              OSMNodeID{static_cast<std::uint64_t>(input_way.nodes()[1].ref())},
              OSMNodeID{static_cast<std::uint64_t>(input_way.nodes()[0].ref())}});
     }
-
-}
-void ExtractorCallbacks::WriteXadNodes(boost::filesystem::ofstream & xad_nodes_out, const osmium::Node &input_node)
-{
-    xad_nodes_out <<input_node.id() << ","
-    << input_node.location().lat() << ","
-    << input_node.location().lon() << std::endl;
 }
 
-void ExtractorCallbacks::WriteXadWays(boost::filesystem::ofstream & xad_ways_out, const osmium::Way &input_way)
-{
-    xad_ways_out <<input_way.id() << ",";
-    for (auto it = input_way.nodes().begin(); it!= input_way.nodes().end()-1; ++it)
-    {
-        xad_ways_out << it->ref() << ";";
-    }
-    xad_ways_out << input_way.nodes().back().ref() << std::endl;
-}
 guidance::LaneDescriptionMap &&ExtractorCallbacks::moveOutLaneDescriptionMap()
 {
     return std::move(lane_description_map);

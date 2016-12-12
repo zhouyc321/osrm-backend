@@ -47,14 +47,14 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/thread/tss.hpp>
-
+#include <osmium/util/string.hpp>
 namespace osrm
 {
 namespace engine
 {
 namespace datafacade
 {
-
+    
 class InternalDataFacade final : public BaseDataFacade
 {
 
@@ -74,6 +74,12 @@ class InternalDataFacade final : public BaseDataFacade
     std::unique_ptr<QueryGraph> m_query_graph;
     std::string m_timestamp;
 
+    // ====== xad poi data =====>
+    util::ShM<std::vector<XadPoiData>, false>::vector  m_xad_pois;
+    util::ShM<std::uint32_t, false>::vector            m_xad_node_poiindex_map;
+    
+    // <====== xad poi data =====
+    
     util::ShM<util::Coordinate, false>::vector m_coordinate_list;
     util::PackedVector<OSMNodeID, false> m_osmnodeid_list;
     util::ShM<NodeID, false>::vector m_via_node_list;
@@ -168,6 +174,65 @@ class InternalDataFacade final : public BaseDataFacade
         util::SimpleLogger().Write() << "Data checksum is " << m_check_sum;
     }
 
+    /*  Load xad poi_nodes_file,
+        It is csv file, the format looks like: [bb_id, node1, node2], while node2 is optional
+        A edge id is represented as 2 adjacent node id.
+        If node2 is missing, then a route is qualified as long as the route includes node1. otherwise it have to include node 1 and node 2 in order.
+     */
+    void XadLoadPoiNodesInformation(const boost::filesystem::path &poi_nodes_file)
+    {
+
+        std::unordered_map<std::uint64_t, std::uint32_t > node_pois_map;
+        boost::filesystem::ifstream poi_nodes_stream(poi_nodes_file, std::ios::in);
+        if (poi_nodes_stream.is_open())
+        {
+            std::string line;
+            std::getline(poi_nodes_stream, line); // skip header line
+            while (std::getline(poi_nodes_stream, line))
+            {
+                util::SimpleLogger().Write() << line; // to be delted
+                std::vector<std::string> pid_nodes = osmium::split_string(line, ',');
+                
+                BOOST_ASSERT_MSG( 2 > pid_nodes.size(), "wrong poi nodes format");
+                std::uint64_t node2 = 0;
+                if ( 3 == pid_nodes.size() ) // which means there are optional node2 field
+                    node2 = std::stoll(pid_nodes[2]);
+                
+                std::uint64_t node1 = std::stoll(pid_nodes[1]);
+                auto it = node_pois_map.find(node1);
+                if (it == node_pois_map.end())
+                {
+                    node_pois_map[node1]= m_xad_pois.size();
+                    m_xad_pois.push_back(std::vector<XadPoiData>());
+                    it = node_pois_map.find(node1);
+                }
+                m_xad_pois.at(it->second).push_back(XadPoiData(pid_nodes[0], node2));
+            }
+            poi_nodes_stream.close();
+        }
+        unsigned number_of_nodes = m_osmnodeid_list.size();
+        m_xad_node_poiindex_map.resize(number_of_nodes);
+        for (unsigned i = 0; i< number_of_nodes; ++i)
+        {
+            auto it = node_pois_map.find(static_cast<std::uint64_t>( GetOSMNodeIDOfNode(i)));
+            if (it == node_pois_map.end())
+            {
+                m_xad_node_poiindex_map[i] = XAD_INVALID_U32ID;
+            }
+            else
+            {
+                // =========== wanfeng debug =============>
+                util::SimpleLogger().Write() << "DEBUG, to be delete";
+                util::SimpleLogger().Write() << it->first;
+                util::SimpleLogger().Write() << it->second;
+                
+                // <=========== debug =============
+                m_xad_node_poiindex_map[i] = it->second;
+            }
+        }
+        
+    }
+    
     void LoadNodeAndEdgeInformation(const boost::filesystem::path &nodes_file,
                                     const boost::filesystem::path &edges_file)
     {
@@ -427,6 +492,10 @@ class InternalDataFacade final : public BaseDataFacade
 
         util::SimpleLogger().Write() << "Loading Lane Data Pairs";
         LoadLaneTupelIdPairs(config.turn_lane_data_path);
+        
+        util::SimpleLogger().Write() << "====== Loading xad_poi_data from:======";
+        util::SimpleLogger().Write() << config.xad_poi_data_path;
+        XadLoadPoiNodesInformation(config.xad_poi_data_path);
     }
 
     // search graph access
@@ -482,7 +551,21 @@ class InternalDataFacade final : public BaseDataFacade
     {
         return m_osmnodeid_list.at(id);
     }
-
+    const std::vector<XadPoiData>* GetXadPoisOfNode(const unsigned id) const override final
+    {
+        BOOST_ASSERT(id < m_xad_node_poiindex_map.size());
+        std::uint32_t idx = m_xad_node_poiindex_map[id];
+        if (XAD_INVALID_U32ID == idx)
+        {
+            return NULL;
+        }
+        else
+        {
+            BOOST_ASSERT(idx < m_xad_pois.size());
+            BOOST_ASSERT(!m_xad_pois[idx].empty());
+            return &m_xad_pois[idx];
+        }
+    }
     extractor::guidance::TurnInstruction
     GetTurnInstructionForEdgeID(const unsigned id) const override final
     {

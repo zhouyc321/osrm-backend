@@ -56,6 +56,7 @@ struct StorageConfig final
     boost::filesystem::path file_index_path;
     boost::filesystem::path hsgr_data_path;
     boost::filesystem::path nodes_data_path;
+    boost::filesystem::path xad_poi_data_path; //xad poi data
     boost::filesystem::path edges_data_path;
     boost::filesystem::path core_data_path;
     boost::filesystem::path geometries_path;

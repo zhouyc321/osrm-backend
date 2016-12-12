@@ -34,6 +34,8 @@ struct LegGeometry
     // original OSM node IDs for each coordinate
     std::vector<OSMNodeID> osm_node_ids;
 
+    // added by wanfeng, xad pois along routes
+    std::vector<XadPoiData> xad_pois;
     // Per-coordinate metadata
     struct Annotation
     {

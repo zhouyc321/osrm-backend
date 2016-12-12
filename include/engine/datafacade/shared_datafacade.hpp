@@ -517,7 +517,13 @@ class SharedDataFacade final : public BaseDataFacade
     {
         return m_osmnodeid_list.at(id);
     }
-
+    
+    const std::vector<XadPoiData>* GetXadPoisOfNode(const unsigned id) const override final
+    {
+        return false;
+    }
+    
+    
     virtual void GetUncompressedGeometry(const EdgeID id,
                                          std::vector<NodeID> &result_nodes) const override final
     {

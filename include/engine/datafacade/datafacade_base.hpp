@@ -37,7 +37,7 @@ class BaseDataFacade
 {
   public:
     using EdgeData = contractor::QueryEdge::EdgeData;
-    using RTreeLeaf = extractor::EdgeBasedNode;
+    using RTreeLeaf = extractor::EdgeBasedNode; 
     BaseDataFacade() {}
     virtual ~BaseDataFacade() {}
 
@@ -69,7 +69,10 @@ class BaseDataFacade
     // node and edge information access
     virtual util::Coordinate GetCoordinateOfNode(const unsigned id) const = 0;
     virtual OSMNodeID GetOSMNodeIDOfNode(const unsigned id) const = 0;
-
+    
+    // get xad poi of node
+    virtual const std::vector<XadPoiData>* GetXadPoisOfNode(const unsigned id) const = 0;
+    
     virtual unsigned GetGeometryIndexForEdgeID(const unsigned id) const = 0;
 
     virtual void GetUncompressedGeometry(const EdgeID id,
