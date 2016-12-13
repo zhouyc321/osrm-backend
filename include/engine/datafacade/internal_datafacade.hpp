@@ -174,13 +174,25 @@ class InternalDataFacade final : public BaseDataFacade
         util::SimpleLogger().Write() << "Data checksum is " << m_check_sum;
     }
 
-    /*  Load xad poi_nodes_file,
+    /*  Load xad poi_nodes_file
         It is csv file, the format looks like: [bb_id, node1, node2], while node2 is optional
-        A edge id is represented as 2 adjacent node id.
-        If node2 is missing, then a route is qualified as long as the route includes node1. otherwise it have to include node 1 and node 2 in order.
+        An edge id is represented as from node1 to node2
+        If node2 is missing
+            if a route include node1
+                it pass billboard
+        else
+            if a route include node1 AND node2 in order
+                it pass billboard
      */
     void XadLoadPoiNodesInformation(const boost::filesystem::path &poi_nodes_file)
     {
+        //It is csv file, the format looks like: [bb_id, node1, node2], while node2 is optional
+        enum poi_nodes_field_index
+        {
+            poi_id_idx = 0, // the 1st field is bb_id (poi_id)
+            node1_idx = 1,  // the 2nd field is node 1
+            node2_idx = 2   // the 3rd is node 2, which is optional
+        };
 
         std::unordered_map<std::uint64_t, std::uint32_t > node_pois_map;
         boost::filesystem::ifstream poi_nodes_stream(poi_nodes_file, std::ios::in);
@@ -193,12 +205,12 @@ class InternalDataFacade final : public BaseDataFacade
                 util::SimpleLogger().Write() << line; // to be delted
                 std::vector<std::string> pid_nodes = osmium::split_string(line, ',');
                 
-                BOOST_ASSERT_MSG( 2 > pid_nodes.size(), "wrong poi nodes format");
-                std::uint64_t node2 = 0;
-                if ( 3 == pid_nodes.size() ) // which means there are optional node2 field
-                    node2 = std::stoll(pid_nodes[2]);
+                BOOST_ASSERT_MSG( node2_idx > pid_nodes.size(), "wrong poi nodes format");
+                std::uint64_t node2 = XAD_INVALID_U32ID;
+                if ( node2_idx +1  == pid_nodes.size() )  // which means there is optional node2 field
+                    node2 = std::stoll(pid_nodes[node2_idx]);
                 
-                std::uint64_t node1 = std::stoll(pid_nodes[1]);
+                std::uint64_t node1 = std::stoll(pid_nodes[node1_idx]);
                 auto it = node_pois_map.find(node1);
                 if (it == node_pois_map.end())
                 {
@@ -206,7 +218,7 @@ class InternalDataFacade final : public BaseDataFacade
                     m_xad_pois.push_back(std::vector<XadPoiData>());
                     it = node_pois_map.find(node1);
                 }
-                m_xad_pois.at(it->second).push_back(XadPoiData(pid_nodes[0], node2));
+                m_xad_pois.at(it->second).push_back(XadPoiData(pid_nodes[poi_id_idx], node2));
             }
             poi_nodes_stream.close();
         }
@@ -225,7 +237,6 @@ class InternalDataFacade final : public BaseDataFacade
                 util::SimpleLogger().Write() << "DEBUG, to be delete";
                 util::SimpleLogger().Write() << it->first;
                 util::SimpleLogger().Write() << it->second;
-                
                 // <=========== debug =============
                 m_xad_node_poiindex_map[i] = it->second;
             }

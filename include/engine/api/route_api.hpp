@@ -95,7 +95,7 @@ class RouteAPI : public BaseAPI
             const bool reversed_target = target_traversed_in_reverse[idx];
 
             auto leg_geometry = guidance::assembleGeometry(
-                BaseAPI::facade, path_data, phantoms.source_phantom, phantoms.target_phantom);
+                BaseAPI::facade, path_data, phantoms.source_phantom, phantoms.target_phantom, parameters.xad_pois);
             auto leg = guidance::assembleLeg(facade,
                                              path_data,
                                              leg_geometry,
@@ -199,8 +199,28 @@ class RouteAPI : public BaseAPI
         }
 
         std::vector<util::json::Object> annotations;
-
-        if (parameters.annotations)
+        // ============= debug, to be deleted
+        util::SimpleLogger().Write() << "DEBUG, parameters.xad_pois ============>";
+        util::SimpleLogger().Write() << parameters.xad_pois;
+        if (parameters.xad_pois)
+        {
+            for (const auto idx : util::irange<std::size_t>(0UL, leg_geometries.size()))
+            {
+                util::json::Array xad_pois;
+                auto &leg_geometry = leg_geometries[idx];
+                std::for_each(leg_geometry.xad_pois.begin(),
+                              leg_geometry.xad_pois.end(),
+                              [this, &xad_pois](const XadPoiData &poi) {
+                                  xad_pois.values.push_back(poi.GetPoiId());
+                              });
+                util::json::Object annotation;
+                annotation.values["xad_pois"] = std::move(xad_pois);
+                annotations.push_back(std::move(annotation));
+            }
+            util::SimpleLogger().Write() << "DEBUG, annotations.size() ============>";
+            util::SimpleLogger().Write() << annotations.size();
+        }
+        else if (parameters.annotations)
         {
             for (const auto idx : util::irange<std::size_t>(0UL, leg_geometries.size()))
             {
