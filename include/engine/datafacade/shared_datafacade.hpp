@@ -520,7 +520,7 @@ class SharedDataFacade final : public BaseDataFacade
     
     const std::vector<XadPoiData>* GetXadPoisOfNode(const unsigned id) const override final
     {
-        return false;
+        return NULL;
     }
     
     

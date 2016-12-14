@@ -202,11 +202,11 @@ class InternalDataFacade final : public BaseDataFacade
             std::getline(poi_nodes_stream, line); // skip header line
             while (std::getline(poi_nodes_stream, line))
             {
-                util::SimpleLogger().Write() << line; // to be delted
+                //util::SimpleLogger().Write() << line; // to be deleted
                 std::vector<std::string> pid_nodes = osmium::split_string(line, ',');
                 
                 BOOST_ASSERT_MSG( node2_idx > pid_nodes.size(), "wrong poi nodes format");
-                std::uint64_t node2 = XAD_INVALID_U32ID;
+                std::uint64_t node2 = XAD_INVALID_NODE;
                 if ( node2_idx +1  == pid_nodes.size() )  // which means there is optional node2 field
                     node2 = std::stoll(pid_nodes[node2_idx]);
                 
@@ -229,15 +229,10 @@ class InternalDataFacade final : public BaseDataFacade
             auto it = node_pois_map.find(static_cast<std::uint64_t>( GetOSMNodeIDOfNode(i)));
             if (it == node_pois_map.end())
             {
-                m_xad_node_poiindex_map[i] = XAD_INVALID_U32ID;
+                m_xad_node_poiindex_map[i] = XAD_INVALID_POI_INDEX;
             }
             else
             {
-                // =========== wanfeng debug =============>
-                util::SimpleLogger().Write() << "DEBUG, to be delete";
-                util::SimpleLogger().Write() << it->first;
-                util::SimpleLogger().Write() << it->second;
-                // <=========== debug =============
                 m_xad_node_poiindex_map[i] = it->second;
             }
         }
@@ -566,7 +561,7 @@ class InternalDataFacade final : public BaseDataFacade
     {
         BOOST_ASSERT(id < m_xad_node_poiindex_map.size());
         std::uint32_t idx = m_xad_node_poiindex_map[id];
-        if (XAD_INVALID_U32ID == idx)
+        if (XAD_INVALID_POI_INDEX == idx)
         {
             return NULL;
         }

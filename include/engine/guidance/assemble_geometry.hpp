@@ -22,6 +22,7 @@ namespace engine
 namespace guidance
 {
 
+
 // Extracts the geometry for each segment and calculates the traveled distance
 // Combines the geometry form the phantom node with the PathData
 // to the full route geometry.
@@ -35,8 +36,7 @@ namespace guidance
 inline LegGeometry assembleGeometry(const datafacade::BaseDataFacade &facade,
                                     const std::vector<PathData> &leg_data,
                                     const PhantomNode &source_node,
-                                    const PhantomNode &target_node,
-                                    bool  output_xad_pois)
+                                    const PhantomNode &target_node)
 {
     LegGeometry geometry;
 
@@ -78,18 +78,6 @@ inline LegGeometry assembleGeometry(const datafacade::BaseDataFacade &facade,
             current_distance, path_point.duration_until_turn / 10., path_point.datasource_id});
         geometry.locations.push_back(std::move(coordinate));
         geometry.osm_node_ids.push_back(facade.GetOSMNodeIDOfNode(path_point.turn_via_node));
-        // TODO, when output_xad_pois is true, no need cacluate guidance.
-        if (output_xad_pois)
-        {
-            auto pPois = facade.GetXadPoisOfNode(path_point.turn_via_node);
-            if (pPois)
-            {
-                geometry.xad_pois.insert(geometry.xad_pois.end(), pPois->begin(), pPois->end());
-                // ============= debug, to be deleted
-                util::SimpleLogger().Write() << "DEBUG, geometry.xad_pois.size() ============>";
-                util::SimpleLogger().Write() << geometry.xad_pois.size();
-            }
-        }
     }
     current_distance =
         util::coordinate_calculation::haversineDistance(prev_coordinate, target_node.location);
