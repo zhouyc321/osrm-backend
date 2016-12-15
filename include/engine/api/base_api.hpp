@@ -48,9 +48,19 @@ class BaseAPI
     //  protected:
     util::json::Object MakeWaypoint(const PhantomNode &phantom) const
     {
+        // Added by feng_wan@xad to exprose more information
+        util::json::Array nodes;
+        nodes.values.push_back(phantom.forward_segment_id.id);
+        nodes.values.push_back(phantom.reverse_segment_id.id);
+                
         return json::makeWaypoint(phantom.location,
                                   facade.GetNameForID(phantom.name_id),
-                                  Hint{phantom, facade.GetCheckSum()});
+                                  Hint{phantom, facade.GetCheckSum()},
+                                  facade.GetRefForID(phantom.name_id),
+                                  nodes,
+                                  static_cast<bool>(phantom.forward_segment_id.enabled),
+                                  static_cast<bool>(phantom.reverse_segment_id.enabled)
+                                );
     }
 
     const datafacade::BaseDataFacade &facade;

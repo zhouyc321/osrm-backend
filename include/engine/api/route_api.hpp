@@ -87,18 +87,23 @@ class RouteAPI : public BaseAPI
     // calculat xad pois along the route
     void MakeXadPois( const std::vector<std::vector<PathData>> &unpacked_path_segments, util::json::Array& json_pois) const
     {
+        std::size_t number_of_path = unpacked_path_segments.size();
+        BOOST_ASSERT(number_of_path>0);
+        const auto &path_data = unpacked_path_segments[0];
+        BOOST_ASSERT(path_data.size()>=2);  // at least 2 nodes
         // nodes contain all paths' nodes; The initial value of 0 serves as sentinal
-        std::vector<NodeID> nodes = {0};
-        for (auto idx : util::irange<std::size_t>(0UL, unpacked_path_segments.size()))
+        std::vector<NodeID> nodes;
+        for (auto it = path_data.begin(); it!= path_data.end(); ++it)
+            nodes.push_back(it->turn_via_node);
+        BOOST_ASSERT(nodes.size()>=2);
+        for (auto idx : util::irange<std::size_t>(1UL, number_of_path))
         {
             const auto &path_data = unpacked_path_segments[idx];
-            for (auto it = path_data.begin(); it!= path_data.end(); ++it)
-            {
-                if (it->turn_via_node != nodes.back())
-                {
-                    nodes.push_back(it->turn_via_node);
-                }
-            }
+            BOOST_ASSERT(path_data.size()>=2);  // at least 2 nodes
+            // skip the first 2 nodes, because they are duplicated, like example below:
+            // http://10.10.10.88:5000/route/v1/driving/-122.10785,37.43467;-122.108751,37.43544;-122.10898,37.43563?annotations=true
+            for (auto it = path_data.begin()+2; it!= path_data.end(); ++it)
+                nodes.push_back(it->turn_via_node);
         }
         for (auto it = nodes.begin()+1; it!= nodes.end(); ++it)
         {
