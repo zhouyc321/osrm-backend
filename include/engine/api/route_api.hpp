@@ -40,33 +40,29 @@ class RouteAPI : public BaseAPI
 
     void MakeResponse(const InternalRouteResult &raw_route, util::json::Object &response) const
     {
-        if (parameters.xad_pois)
+        auto number_of_routes = raw_route.has_alternative() ? 2UL : 1UL;
+        util::json::Array routes;
+        routes.values.resize(number_of_routes);
+        routes.values[0] = parameters.xad_pois ?
+            MakeXadPois(raw_route.segment_end_coordinates,raw_route.unpacked_path_segments):
+            MakeRoute(raw_route.segment_end_coordinates,
+                                     raw_route.unpacked_path_segments,
+                                     raw_route.source_traversed_in_reverse,
+                                     raw_route.target_traversed_in_reverse);
+        if (raw_route.has_alternative())
         {
-            util::json::Array pois;
-            MakeXadPois(raw_route.segment_end_coordinates,raw_route.unpacked_path_segments, pois);
-            response.values["xad_pois"] = std::move(pois);
+            std::vector<std::vector<PathData>> wrapped_leg(1);
+            wrapped_leg.front() = std::move(raw_route.unpacked_alternative);
+            routes.values[1] = parameters.xad_pois ?
+                MakeXadPois(raw_route.segment_end_coordinates,wrapped_leg) :
+                MakeRoute(raw_route.segment_end_coordinates,
+                                         wrapped_leg,
+                                         raw_route.alt_source_traversed_in_reverse,
+                                         raw_route.alt_target_traversed_in_reverse);
         }
-        else
-        {
-            auto number_of_routes = raw_route.has_alternative() ? 2UL : 1UL;
-            util::json::Array routes;
-            routes.values.resize(number_of_routes);
-            routes.values[0] = MakeRoute(raw_route.segment_end_coordinates,
-                                         raw_route.unpacked_path_segments,
-                                         raw_route.source_traversed_in_reverse,
-                                         raw_route.target_traversed_in_reverse);
-            if (raw_route.has_alternative())
-            {
-                std::vector<std::vector<PathData>> wrapped_leg(1);
-                wrapped_leg.front() = std::move(raw_route.unpacked_alternative);
-                routes.values[1] = MakeRoute(raw_route.segment_end_coordinates,
-                                             wrapped_leg,
-                                             raw_route.alt_source_traversed_in_reverse,
-                                             raw_route.alt_target_traversed_in_reverse);
-            }
+        if (!parameters.xad_pois)
             response.values["waypoints"] = BaseAPI::MakeWaypoints(raw_route.segment_end_coordinates);
-            response.values["routes"] = std::move(routes);
-        }
+        response.values["routes"] = std::move(routes);
         response.values["code"] = "Ok";
     }
 
@@ -121,11 +117,10 @@ class RouteAPI : public BaseAPI
 
     
     // calculat xad pois along the route
-    void MakeXadPois(const std::vector<PhantomNodes> &segment_end_coordinates,
-                     const std::vector<std::vector<PathData>> &unpacked_path_segments,
-                     util::json::Array& json_pois) const
+    util::json::Object MakeXadPois(const std::vector<PhantomNodes> &segment_end_coordinates,
+                       const std::vector<std::vector<PathData>> &unpacked_path_segments) const
     {
-        
+        util::json::Array json_pois;
         std::vector<NodeID> nodes; // nodes contain all paths' nodes;
         AssembleNodes(segment_end_coordinates,unpacked_path_segments,nodes);
         for (auto it = nodes.begin(); it+1!= nodes.end(); ++it)
@@ -151,6 +146,10 @@ class RouteAPI : public BaseAPI
                 }
             }
         }
+        util::json::Object result;
+        result.values["xad_pois"] = std::move(json_pois);
+        return std::move(result);
+        
     }
     util::json::Object MakeRoute(const std::vector<PhantomNodes> &segment_end_coordinates,
                                  const std::vector<std::vector<PathData>> &unpacked_path_segments,
