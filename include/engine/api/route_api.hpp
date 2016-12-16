@@ -43,7 +43,7 @@ class RouteAPI : public BaseAPI
         if (parameters.xad_pois)
         {
             util::json::Array pois;
-            MakeXadPois(raw_route.unpacked_path_segments, pois);
+            MakeXadPois(raw_route.segment_end_coordinates,raw_route.unpacked_path_segments, pois);
             response.values["xad_pois"] = std::move(pois);
         }
         else
@@ -83,28 +83,51 @@ class RouteAPI : public BaseAPI
         BOOST_ASSERT(parameters.geometries == RouteParameters::GeometriesType::GeoJSON);
         return json::makeGeoJSONGeometry(begin, end);
     }
-    
+
     // calculat xad pois along the route
-    void MakeXadPois( const std::vector<std::vector<PathData>> &unpacked_path_segments, util::json::Array& json_pois) const
+    void AssembleNodes(const std::vector<PhantomNodes> &segment_end_coordinates,
+                       const std::vector<std::vector<PathData>> &unpacked_path_segments,
+                       std::vector<NodeID>& nodes) const
     {
         std::size_t number_of_path = unpacked_path_segments.size();
         BOOST_ASSERT(number_of_path>0);
-        const auto &path_data = unpacked_path_segments[0];
-        BOOST_ASSERT(path_data.size()>=2);  // at least 2 nodes
-        // nodes contain all paths' nodes; The initial value of 0 serves as sentinal
-        std::vector<NodeID> nodes;
-        for (auto it = path_data.begin(); it!= path_data.end(); ++it)
-            nodes.push_back(it->turn_via_node);
-        BOOST_ASSERT(nodes.size()>=2);
-        for (auto idx : util::irange<std::size_t>(1UL, number_of_path))
+        BOOST_ASSERT(number_of_path == segment_end_coordinates.size());
+        const auto &source_node = segment_end_coordinates.front().source_phantom;
+        // Need to get the node ID preceding the source phantom node
+        // TODO: check if this was traversed in reverse?
+        std::vector<NodeID> reverse_geometry;
+        facade.GetUncompressedGeometry(source_node.reverse_packed_geometry_id, reverse_geometry);
+        nodes.push_back(reverse_geometry[reverse_geometry.size() - source_node.fwd_segment_position - 1]);
+        
+        for (auto idx : util::irange<std::size_t>(0UL, number_of_path))
         {
             const auto &path_data = unpacked_path_segments[idx];
-            BOOST_ASSERT(path_data.size()>=2);  // at least 2 nodes
-            // skip the first 2 nodes, because they are duplicated, like example below:
-            // http://10.10.10.88:5000/route/v1/driving/-122.10785,37.43467;-122.108751,37.43544;-122.10898,37.43563?annotations=true
-            for (auto it = path_data.begin()+2; it!= path_data.end(); ++it)
+            
+            for (auto it = path_data.begin(); it!= path_data.end(); ++it)
+            {
+                util::SimpleLogger().Write() << "to be deleted  ";
+                util::SimpleLogger().Write() << it->turn_via_node;
                 nodes.push_back(it->turn_via_node);
+            }
         }
+        const auto &target_node = segment_end_coordinates.back().target_phantom;
+        // Need to get the node ID following the destination phantom node
+        // TODO: check if this was traversed in reverse??
+        std::vector<NodeID> forward_geometry;
+        facade.GetUncompressedGeometry(target_node.forward_packed_geometry_id, forward_geometry);
+        nodes.push_back(forward_geometry[target_node.fwd_segment_position]);
+        
+    }
+
+    
+    // calculat xad pois along the route
+    void MakeXadPois(const std::vector<PhantomNodes> &segment_end_coordinates,
+                     const std::vector<std::vector<PathData>> &unpacked_path_segments,
+                     util::json::Array& json_pois) const
+    {
+        
+        std::vector<NodeID> nodes; // nodes contain all paths' nodes;
+        AssembleNodes(segment_end_coordinates,unpacked_path_segments,nodes);
         for (auto it = nodes.begin(); it+1!= nodes.end(); ++it)
         {
             auto pois_data = facade.GetXadPoisOfNode(*it);
