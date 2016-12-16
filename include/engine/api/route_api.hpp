@@ -105,7 +105,7 @@ class RouteAPI : public BaseAPI
             for (auto it = path_data.begin()+2; it!= path_data.end(); ++it)
                 nodes.push_back(it->turn_via_node);
         }
-        for (auto it = nodes.begin()+1; it!= nodes.end(); ++it)
+        for (auto it = nodes.begin(); it+1!= nodes.end(); ++it)
         {
             auto pois_data = facade.GetXadPoisOfNode(*it);
             if (pois_data)
@@ -113,14 +113,13 @@ class RouteAPI : public BaseAPI
                 BOOST_ASSERT(!pois_data->empty());
                 for (auto it_poi = pois_data->begin(); it_poi!= pois_data->end(); ++it_poi)
                 {
-                    auto it2 = it+1; // the next node
-                    if (it_poi->CanIgnoreNode2() || it2 == nodes.end())
+                    if (it_poi->CanIgnoreNode2())
                     {
                         json_pois.values.push_back(it_poi->GetPoiId());
                     }
                     else
                     {
-                        std::uint64_t path_node2 = static_cast<std::uint64_t>( facade.GetOSMNodeIDOfNode(*it2));
+                        std::uint64_t path_node2 = static_cast<std::uint64_t>( facade.GetOSMNodeIDOfNode(*(it+1)));
                         if (path_node2 == it_poi->GetNode2())
                         {
                             json_pois.values.push_back(it_poi->GetPoiId());
