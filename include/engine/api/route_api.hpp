@@ -101,8 +101,6 @@ class RouteAPI : public BaseAPI
             
             for (auto it = path_data.begin(); it!= path_data.end(); ++it)
             {
-                util::SimpleLogger().Write() << "to be deleted  ";
-                util::SimpleLogger().Write() << it->turn_via_node;
                 nodes.push_back(it->turn_via_node);
             }
         }
