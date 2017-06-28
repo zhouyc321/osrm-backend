@@ -31,6 +31,10 @@ struct RouteParametersGrammar : public BaseParametersGrammar<Iterator, Signature
         route_rule =
             (qi::lit("alternatives=") >
              qi::bool_[ph::bind(&engine::api::RouteParameters::alternatives, qi::_r1) = qi::_1]) |
+
+            (qi::lit("xad_pois=") >
+             qi::bool_[ph::bind(&engine::api::RouteParameters::xad_pois, qi::_r1) = qi::_1]) |
+    
             (qi::lit("continue_straight=") >
              (qi::lit("default") |
               qi::bool_[ph::bind(&engine::api::RouteParameters::continue_straight, qi::_r1) =
@@ -53,6 +57,10 @@ struct RouteParametersGrammar : public BaseParametersGrammar<Iterator, Signature
             BaseGrammar::base_rule(qi::_r1) |
             (qi::lit("steps=") >
              qi::bool_[ph::bind(&engine::api::RouteParameters::steps, qi::_r1) = qi::_1]) |
+
+            (qi::lit("xad_pois=") >
+             qi::bool_[ph::bind(&engine::api::RouteParameters::xad_pois, qi::_r1) = qi::_1]) |
+
             (qi::lit("annotations=") >
              qi::bool_[ph::bind(&engine::api::RouteParameters::annotations, qi::_r1) = qi::_1]) |
             (qi::lit("geometries=") >

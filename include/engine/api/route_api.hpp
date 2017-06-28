@@ -43,7 +43,9 @@ class RouteAPI : public BaseAPI
         auto number_of_routes = raw_route.has_alternative() ? 2UL : 1UL;
         util::json::Array routes;
         routes.values.resize(number_of_routes);
-        routes.values[0] = MakeRoute(raw_route.segment_end_coordinates,
+        routes.values[0] = parameters.xad_pois ?
+            MakeXadPois(raw_route.segment_end_coordinates,raw_route.unpacked_path_segments):
+            MakeRoute(raw_route.segment_end_coordinates,
                                      raw_route.unpacked_path_segments,
                                      raw_route.source_traversed_in_reverse,
                                      raw_route.target_traversed_in_reverse);
@@ -51,12 +53,15 @@ class RouteAPI : public BaseAPI
         {
             std::vector<std::vector<PathData>> wrapped_leg(1);
             wrapped_leg.front() = std::move(raw_route.unpacked_alternative);
-            routes.values[1] = MakeRoute(raw_route.segment_end_coordinates,
+            routes.values[1] = parameters.xad_pois ?
+                MakeXadPois(raw_route.segment_end_coordinates,wrapped_leg) :
+                MakeRoute(raw_route.segment_end_coordinates,
                                          wrapped_leg,
                                          raw_route.alt_source_traversed_in_reverse,
                                          raw_route.alt_target_traversed_in_reverse);
         }
-        response.values["waypoints"] = BaseAPI::MakeWaypoints(raw_route.segment_end_coordinates);
+        if (!parameters.xad_pois)
+            response.values["waypoints"] = BaseAPI::MakeWaypoints(raw_route.segment_end_coordinates);
         response.values["routes"] = std::move(routes);
         response.values["code"] = "Ok";
     }
@@ -75,6 +80,75 @@ class RouteAPI : public BaseAPI
         return json::makeGeoJSONGeometry(begin, end);
     }
 
+    // calculat xad pois along the route
+    void AssembleNodes(const std::vector<PhantomNodes> &segment_end_coordinates,
+                       const std::vector<std::vector<PathData>> &unpacked_path_segments,
+                       std::vector<NodeID>& nodes) const
+    {
+        std::size_t number_of_path = unpacked_path_segments.size();
+        BOOST_ASSERT(number_of_path>0);
+        BOOST_ASSERT(number_of_path == segment_end_coordinates.size());
+        const auto &source_node = segment_end_coordinates.front().source_phantom;
+        // Need to get the node ID preceding the source phantom node
+        // TODO: check if this was traversed in reverse?
+        std::vector<NodeID> reverse_geometry;
+        facade.GetUncompressedGeometry(source_node.reverse_packed_geometry_id, reverse_geometry);
+        nodes.push_back(reverse_geometry[reverse_geometry.size() - source_node.fwd_segment_position - 1]);
+        
+        for (auto idx : util::irange<std::size_t>(0UL, number_of_path))
+        {
+            const auto &path_data = unpacked_path_segments[idx];
+            
+            for (auto it = path_data.begin(); it!= path_data.end(); ++it)
+            {
+                nodes.push_back(it->turn_via_node);
+            }
+        }
+        const auto &target_node = segment_end_coordinates.back().target_phantom;
+        // Need to get the node ID following the destination phantom node
+        // TODO: check if this was traversed in reverse??
+        std::vector<NodeID> forward_geometry;
+        facade.GetUncompressedGeometry(target_node.forward_packed_geometry_id, forward_geometry);
+        nodes.push_back(forward_geometry[target_node.fwd_segment_position]);
+        
+    }
+
+    
+    // calculat xad pois along the route
+    util::json::Object MakeXadPois(const std::vector<PhantomNodes> &segment_end_coordinates,
+                       const std::vector<std::vector<PathData>> &unpacked_path_segments) const
+    {
+        util::json::Array json_pois;
+        std::vector<NodeID> nodes; // nodes contain all paths' nodes;
+        AssembleNodes(segment_end_coordinates,unpacked_path_segments,nodes);
+        for (auto it = nodes.begin(); it+1!= nodes.end(); ++it)
+        {
+            auto pois_data = facade.GetXadPoisOfNode(*it);
+            if (pois_data)
+            {
+                BOOST_ASSERT(!pois_data->empty());
+                for (auto it_poi = pois_data->begin(); it_poi!= pois_data->end(); ++it_poi)
+                {
+                    if (it_poi->CanIgnoreNode2())
+                    {
+                        json_pois.values.push_back(it_poi->GetPoiId());
+                    }
+                    else
+                    {
+                        std::uint64_t path_node2 = static_cast<std::uint64_t>( facade.GetOSMNodeIDOfNode(*(it+1)));
+                        if (path_node2 == it_poi->GetNode2())
+                        {
+                            json_pois.values.push_back(it_poi->GetPoiId());
+                        }
+                    }
+                }
+            }
+        }
+        util::json::Object result;
+        result.values["xad_pois"] = std::move(json_pois);
+        return std::move(result);
+        
+    }
     util::json::Object MakeRoute(const std::vector<PhantomNodes> &segment_end_coordinates,
                                  const std::vector<std::vector<PathData>> &unpacked_path_segments,
                                  const std::vector<bool> &source_traversed_in_reverse,
@@ -199,7 +273,6 @@ class RouteAPI : public BaseAPI
         }
 
         std::vector<util::json::Object> annotations;
-
         if (parameters.annotations)
         {
             for (const auto idx : util::irange<std::size_t>(0UL, leg_geometries.size()))

@@ -22,6 +22,7 @@ namespace engine
 namespace guidance
 {
 
+
 // Extracts the geometry for each segment and calculates the traveled distance
 // Combines the geometry form the phantom node with the PathData
 // to the full route geometry.

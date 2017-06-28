@@ -98,4 +98,33 @@ struct SegmentID
 
 static_assert(sizeof(SegmentID) == 4, "SegmentID needs to be 4 bytes big");
 
+/** Xad Poi Data, the first application is for billboard
+ */
+static const uint32_t XAD_INVALID_POI_INDEX = std::numeric_limits<uint32_t>::max();
+static const uint64_t XAD_INVALID_NODE = 0;
+class XadPoiData
+{
+public:
+    XadPoiData(const std::string& pid, std::uint64_t _node2 =XAD_INVALID_NODE) :
+    poi_id(pid),
+    node2(_node2)
+    {}
+    bool CanIgnoreNode2() const
+    {
+        return node2 == XAD_INVALID_NODE;
+    }
+    const std::string& GetPoiId() const
+    {
+        return poi_id;
+    }
+    
+    std::uint64_t GetNode2() const
+    {
+        return node2;
+    }
+private:
+    std::string    poi_id;      // poi_id
+    std::uint64_t  node2;      // the second osm node,
+};
+
 #endif /* TYPEDEFS_H */

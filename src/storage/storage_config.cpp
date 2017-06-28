@@ -7,11 +7,12 @@ namespace osrm
 {
 namespace storage
 {
-
+    
 StorageConfig::StorageConfig(const boost::filesystem::path &base)
     : ram_index_path{base.string() + ".ramIndex"}, file_index_path{base.string() + ".fileIndex"},
       hsgr_data_path{base.string() + ".hsgr"}, nodes_data_path{base.string() + ".nodes"},
       edges_data_path{base.string() + ".edges"}, core_data_path{base.string() + ".core"},
+      xad_poi_data_path{base.string() + ".billboard_edges"},
       geometries_path{base.string() + ".geometry"}, timestamp_path{base.string() + ".timestamp"},
       datasource_names_path{base.string() + ".datasource_names"},
       datasource_indexes_path{base.string() + ".datasource_indexes"},

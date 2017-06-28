@@ -398,13 +398,6 @@ void ExtractorCallbacks::ProcessWay(const osmium::Way &input_way, const Extracti
              OSMNodeID{static_cast<std::uint64_t>(input_way.nodes()[1].ref())},
              OSMNodeID{static_cast<std::uint64_t>(input_way.nodes()[0].ref())}});
     }
-    // added by wanfeng
-    std::cout << "wanfeng,"<<input_way.id() << ",";
-    for (auto it = input_way.nodes().begin(); it!= input_way.nodes().end()-1; ++it)
-    {
-        std::cout << it->ref() << ";";
-    }
-    std::cout << input_way.nodes().back().ref() << std::endl;
 }
 
 guidance::LaneDescriptionMap &&ExtractorCallbacks::moveOutLaneDescriptionMap()
